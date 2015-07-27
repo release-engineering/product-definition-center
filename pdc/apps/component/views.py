@@ -119,7 +119,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
                 "previous": url,
                 "results": [
                     {
-                        "url": url,
+                        "id": int,
                         "name": string,
                         "dist_git_path": <string|null>,
                         "dist_git_web_url": string,
@@ -160,7 +160,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "name": string,
                 "dist_git_path": <string|null>,
                 "dist_git_web_url": string,
@@ -206,7 +206,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "name": string,
                 "dist_git_path": string,
                 "dist_git_web_url": string,
@@ -220,7 +220,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
             curl -X POST -H "Content-Type: application/json" %(HOST_NAME)s/%(API_PATH)s/global-components/ -d '{ "name": "Demo", "dist_git_path": "rpm/Demo"}'
             # output
             {
-                "url": "%(HOST_NAME)s/%(API_PATH)s/global-components/4181/",
+                "id": 4181,
                 "name": "Demo",
                 "dist_git_path": "rpm/Demo",
                 "dist_git_web_url": "http://pkgs.example.com/cgit/rpms/rpm/Demo"
@@ -256,7 +256,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "name": string,
                 "dist_git_path": string,
                 "dist_git_web_url": string,
@@ -276,7 +276,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
             curl -X PUT -H "Content-Type: application/json" %(HOST_NAME)s/%(API_PATH)s/global-components/4181/ -d '{"name": "Demo1", "dist_git_path": "rpm/Demo1"}'
             # output
             {
-                "url": "%(HOST_NAME)s/%(API_PATH)s/global-components/4181/",
+                "id": 4181,
                 "name": "Demo",
                 "dist_git_path": "rpm/Demo1",
                 "dist_git_web_url": "http://pkgs.example.com/cgit/rpms/rpm/Demo1"
@@ -290,7 +290,7 @@ class GlobalComponentViewSet(viewsets.PDCModelViewSet):
             curl -X PATCH -H "Content-Type: application/json" %(HOST_NAME)s/%(API_PATH)s/global-components/4181/ -d '{"dist_git_path": "rpm/Demo1"}'
             # output
             {
-                "url": "%(HOST_NAME)s/%(API_PATH)s/global-components/4181/",
+                "id": 4181,
                 "name": "Demo",
                 "dist_git_path": "rpm/Demo1",
                 "dist_git_web_url": "http://pkgs.example.com/cgit/rpms/rpm/Demo1"
@@ -733,14 +733,14 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
                 "previous": url,
                 "results": [
                     {
-                        "url": url,
+                        "id": int,
                         "release": {
                             "release_id": string,
                             "active": bool
                         },
                         "global_component": string,
                         "bugzilla_component": {
-                            "url": url,
+                            "id": int,
                             "name": string,
                             "parent_component": string,
                             "subcomponents": [
@@ -777,14 +777,14 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "release": {
                     "release_id": string,
                     "active": bool
                 },
                 "global_component": string,
                 "bugzilla_component": {
-                    "url": url,
+                    "id": int,
                     "name": string,
                     "parent_component": string,
                     "subcomponents": [
@@ -862,7 +862,7 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "release": {
                     "release_id": string,
                     "active": bool
@@ -932,7 +932,7 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "release": {
                     "release_id": string,
                     "active": bool
@@ -944,7 +944,7 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
                 "dist_git_web_url": string,
                 "active": true,
                 "bugzilla_component": {
-                    "url": url,
+                    "id": int,
                     "name": string,
                     "parent_component": null,
                     "subcomponents": [
@@ -1023,7 +1023,7 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
 
             [
                 {
-                    "url": url,
+                    "id": int,
                     "release": {
                         "release_id": string,
                         "active": bool
@@ -1390,7 +1390,7 @@ class BugzillaComponentViewSet(viewsets.PDCModelViewSet):
                 "previous": url,
                 "results": [
                     {
-                        "url": url,
+                        "id": int,
                         "name: string,
                         "parent_component": string,
                         "subcomponents": [
@@ -1414,7 +1414,7 @@ class BugzillaComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "name": string,
                 "parent_component": string,
                 "subcomponents": [
@@ -1446,7 +1446,7 @@ class BugzillaComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "name": string,
                 "parent_component": string,
                 "subcomponents": [
@@ -1538,7 +1538,7 @@ class BugzillaComponentViewSet(viewsets.PDCModelViewSet):
         __Response__:
 
             {
-                "url": url,
+                "id": int,
                 "name": string,
                 "parent_component": string,
                 "subcomponents": [

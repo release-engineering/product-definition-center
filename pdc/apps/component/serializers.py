@@ -236,7 +236,7 @@ class GlobalComponentSerializer(DynamicFieldsSerializerMixin,
 
     class Meta:
         model = GlobalComponent
-        fields = ('url', 'name', 'dist_git_path', 'dist_git_web_url', 'contacts', 'labels', 'upstream')
+        fields = ('id', 'name', 'dist_git_path', 'dist_git_web_url', 'contacts', 'labels', 'upstream')
 
 
 class TreeForeignKeyField(serializers.Field):
@@ -295,7 +295,7 @@ class BugzillaComponentSerializer(DynamicFieldsSerializerMixin,
 
     class Meta:
         model = BugzillaComponent
-        fields = ('url', 'name', 'parent_component', 'subcomponents')
+        fields = ('id', 'name', 'parent_component', 'subcomponents')
 
 
 class ReleaseField(serializers.Field):
@@ -413,7 +413,7 @@ class ReleaseComponentSerializer(DynamicFieldsSerializerMixin,
 
     class Meta:
         model = ReleaseComponent
-        fields = ('url', 'release', 'bugzilla_component', 'brew_package', 'global_component',
+        fields = ('id', 'release', 'bugzilla_component', 'brew_package', 'global_component',
                   'name', 'dist_git_branch', 'dist_git_web_url', 'active',
                   'contacts', 'type')
         validators = [UniqueTogetherValidator(
