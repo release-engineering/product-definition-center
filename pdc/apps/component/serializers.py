@@ -10,6 +10,7 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
 from django.utils import six
 from django.utils.text import capfirst
+from django.core.exceptions import FieldError
 
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -370,8 +371,12 @@ class ReleaseComponentSerializer(DynamicFieldsSerializerMixin,
         return ret
 
     def to_internal_value(self, data):
-        # For Update request, restore release and global_component for unique validation.
+        # Raise error explictly when release and global_component is given.
         if self.instance:
+            allowed_keys = self.get_allowed_keys() - set(['release', 'global_component'])
+            extra_fields = set(data.keys()) - allowed_keys
+            if extra_fields:
+                raise FieldError('Unknown fields: %s.' % ', '.join('"%s"' % f for f in extra_fields))
             data['release'] = self.instance.release
             data['global_component'] = self.instance.global_component
         return super(ReleaseComponentSerializer, self).to_internal_value(data)
