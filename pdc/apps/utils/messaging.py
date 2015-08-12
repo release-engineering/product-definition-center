@@ -3,7 +3,11 @@
 # Licensed under The MIT License (MIT)
 # http://opensource.org/licenses/MIT
 #
+import logging
+
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DummyMessenger(object):
@@ -49,3 +53,33 @@ class ProtonMessenger(object):
         self.message.body = msg
         self.messenger.put(self.message)
         self.messenger.send()
+
+
+class QpidMessenger(object):
+    def __init__(self):
+        from qpid.messaging import Connection, Message
+        from . import transports  # noqa
+        self.message_cls = Message
+        self.messaging_except_cls = Message
+        self.connection = Connection(url=settings.MESSAGE_BUS['ENDPOINTS'][0],
+                                     reconnect=True,
+                                     socket_timeout=settings.MESSAGE_BUS['SOCKET_TIMEOUT'],
+                                     reconnect_timeout=settings.MESSAGE_BUS['CONN_TIMEOUT'],
+                                     reconnect_urls=settings.MESSAGE_BUS['ENDPOINTS'],
+                                     ssl_certfile=settings.MESSAGE_BUS['CERT_FILE'],
+                                     ssl_keyfile=settings.MESSAGE_BUS['KEY_FILE'])
+
+    def send_message(self, topic, msg):
+        address = settings.MESSAGE_BUS['QUEUE'] + str(topic)
+        message = self.message_cls(msg)
+        try:
+            self.connection.open()
+            session = self.connection.session()
+            self.sender = session.sender(address)
+            self.sender.send(message, timeout=settings.MESSAGE_BUS['SEND_TIMEOUT'])
+        except Exception, e:
+            if self.connection.opened():
+                self.connection.close()
+            if not self.connection.reconnect:
+                self.connection.reconnect = True
+            logger.warn('Send Message exception: %s.' % str(e))

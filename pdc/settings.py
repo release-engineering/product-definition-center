@@ -223,6 +223,7 @@ EMPTY_PATCH_ERROR_RESPONSE = {
 MESSAGE_BUS = {
     # MLP: Messaging Library Package
     #      e.g. `fedmsg` for fedmsg or `kombu` for AMQP and other transports that `kombu` supports.
+    #           `qpid` for qpid AMQP supports.
     'MLP': '',
 
     # # `fedmsg` config example:
@@ -248,6 +249,19 @@ MESSAGE_BUS = {
     #         'cert_reqs': ssl.CERT_REQUIRED,
     #     }
     # }
+    #
+    # # `qpid` config items:
+    # 'MLP': 'qpid',
+    # 'ENDPOINTS': ['amqps://example1.com:5671',
+    #               'amqps://example2.com:5671',
+    #               'amqps://example3.com:5671',
+    #               ],
+    # 'QUEUE': 'pdc',
+    # 'SOCKET_TIMEOUT': 1,  # seconds, socket open timeout,
+    # 'CONN_TIMEOUT': 5,    # seconds, whole connection timeout,
+    # 'SEND_TIMEOUT': 1,    # seconds, msg send timeout,
+    # 'CERT_FILE': '',
+    # 'KEY_FILE': '',
 }
 
 LOGGING = {

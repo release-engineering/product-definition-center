@@ -5,7 +5,7 @@
 #
 from django.conf import settings
 
-from .messaging import DummyMessenger, KombuMessenger, FedmsgMessenger, ProtonMessenger
+from .messaging import DummyMessenger, KombuMessenger, FedmsgMessenger, ProtonMessenger, QpidMessenger
 
 
 # init messenger
@@ -15,5 +15,7 @@ elif settings.MESSAGE_BUS['MLP'] == 'fedmsg':
     messenger = FedmsgMessenger()
 elif settings.MESSAGE_BUS['MLP'] == 'proton':
     messenger = ProtonMessenger()
+elif settings.MESSAGE_BUS['MLP'] == 'qpid':
+    messenger = QpidMessenger()
 else:
     messenger = DummyMessenger()
