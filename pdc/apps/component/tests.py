@@ -2166,12 +2166,29 @@ class GroupRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_create_group(self):
+    def test_create_group_with_components_id(self):
         url = reverse('componentgroup-list')
-        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd', 'components': [1, 2]}
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd',
+                'components': [{'id': 1}, {'id': 2}]}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNumChanges([1])
+
+    def test_create_group_with_components_unique_together_fields(self):
+        url = reverse('componentgroup-list')
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd',
+                'components': [{'release': 'release-1.0', 'global_component': 'python', 'name': 'python27'}]}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNumChanges([1])
+
+    def test_create_group_with_components_wrong_format(self):
+        url = reverse('componentgroup-list')
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd',
+                'components': ['wrong field']}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNumChanges([])
 
     def test_create_group_without_component(self):
         url = reverse('componentgroup-list')
@@ -2182,34 +2199,35 @@ class GroupRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
 
     def test_create_group_with_non_existed_release_component(self):
         url = reverse('componentgroup-list')
-        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd', 'components': [9999]}
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd', 'components': [{'id': 9999}]}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNumChanges([])
 
     def test_create_group_with_different_releases(self):
         url = reverse('componentgroup-list')
-        data = {'group_type': 'type2', 'release': 'release-2.0', 'description': 'dd', 'components': [1, 2]}
+        data = {'group_type': 'type2', 'release': 'release-2.0', 'description': 'dd',
+                'components': [{'id': 1}, {'id': 2}]}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNumChanges([])
 
     def test_update_group(self):
         url = reverse('componentgroup-detail', kwargs={'pk': 1})
-        data = {'group_type': 'type1', 'release': 'release-1.0', 'description': 'dd', 'components': [1]}
+        data = {'group_type': 'type1', 'release': 'release-1.0', 'description': 'dd', 'components': [{'id': 1}]}
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('components')[0].get('name'), 'python27')
 
     def test_update_group_with_other_release(self):
         url = reverse('componentgroup-detail', kwargs={'pk': 1})
-        data = {'group_type': 'type1', 'release': 'release-2.0', 'description': 'dd', 'components': [1]}
+        data = {'group_type': 'type1', 'release': 'release-2.0', 'description': 'dd', 'components': [{'id': 1}]}
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_partial_update_group(self):
         url = reverse('componentgroup-detail', kwargs={'pk': 1})
-        data = {'components': [1]}
+        data = {'components': [{'id': 1}]}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('components')[0].get('name'), 'python27')
@@ -2251,7 +2269,7 @@ class ReleaseComponentRelationshipRESTTestCase(TestCaseWithChangeSetMixin, APITe
 
     def test_create_relationship(self):
         url = reverse('rcrelationship-list')
-        data = {"from_component": "1", "to_component": "2", "type": "executes"}
+        data = {"from_component": {'id': 1}, "to_component": {'id': 2}, "type": "executes"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNumChanges([1])
@@ -2262,14 +2280,32 @@ class ReleaseComponentRelationshipRESTTestCase(TestCaseWithChangeSetMixin, APITe
 
     def test_create_relationship_with_non_existed_release_component(self):
         url = reverse('rcrelationship-list')
-        data = {"from_component": "1", "to_component": "20000", "type": "executes"}
+        data = {"from_component": {'id': 1}, "to_component": {'id': 20000}, "type": "executes"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNumChanges([])
 
     def test_create_relationship_with_non_existed_type(self):
         url = reverse('rcrelationship-list')
-        data = {"from_component": "1", "to_component": "2", "type": "fake-type"}
+        data = {"from_component": {'id': 1}, "to_component": {'id': 2}, "type": "fake-type"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNumChanges([])
+
+    def test_create_relationship_with_unique_together_fields(self):
+        url = reverse('rcrelationship-list')
+        data = {"from_component": {'release': 'release-1.0', 'global_component': 'python', 'name': 'python27'},
+                "to_component": {'release': 'release-1.0', 'global_component': 'MySQL-python', 'name': 'MySQL-python'},
+                "type": "executes"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNumChanges([1])
+
+    def test_create_group_with_components_wrong_format(self):
+        url = reverse('rcrelationship-list')
+        data = {"from_component": 'wrong field',
+                "to_component": {'release': 'release-1.0', 'global_component': 'MySQL-python', 'name': 'MySQL-python'},
+                "type": "executes"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNumChanges([])
@@ -2311,21 +2347,21 @@ class ReleaseComponentRelationshipRESTTestCase(TestCaseWithChangeSetMixin, APITe
     def test_update_relationship(self):
         url = reverse('rcrelationship-detail', kwargs={'pk': 1})
         # 2 name MySQL-python, 3 name java
-        data = {'type': 'executes', "from_component": 2, "to_component": 3}
+        data = {'type': 'executes', "from_component": {'id': 2}, "to_component": {'id': 3}}
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('to_component').get('name'), 'java')
 
     def test_update_relationship_with_non_exist_release_component(self):
         url = reverse('rcrelationship-detail', kwargs={'pk': 1})
-        data = {'type': 'executes', "from_component": 2, "to_component": 20}
+        data = {'type': 'executes', "from_component": {'id': 2}, "to_component": {'id': 20}}
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_partial_update_relationship_to_component(self):
         url = reverse('rcrelationship-detail', kwargs={'pk': 1})
         # 2 name MySQL-python, 3 name java
-        data = {"to_component": 3}
+        data = {"to_component": {'id': 3}}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('to_component').get('name'), 'java')
@@ -2333,7 +2369,7 @@ class ReleaseComponentRelationshipRESTTestCase(TestCaseWithChangeSetMixin, APITe
     def test_partial_update_relationship_from_component(self):
         url = reverse('rcrelationship-detail', kwargs={'pk': 1})
         # 2 name MySQL-python, 3 name java
-        data = {"from_component": 3}
+        data = {"from_component": {'id': 3}}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('from_component').get('name'), 'java')
