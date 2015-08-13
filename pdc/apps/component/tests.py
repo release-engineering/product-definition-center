@@ -1253,6 +1253,13 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(bingding_models.ReleaseComponentSRPMNameMapping.objects.count(), 0)
         self.assertNumChanges([1])
 
+    def test_update_release_component_type_to_null(self):
+        url = reverse('releasecomponent-detail', kwargs={'pk': 1})
+        data = {'type': None}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['type'])
+
     def test_update_with_patch_wrong_format_srpm(self):
         url = reverse('releasecomponent-detail', kwargs={'pk': 1})
         data = {'srpm': 'name'}

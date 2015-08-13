@@ -327,7 +327,8 @@ class ReleaseComponentSerializer(DynamicFieldsSerializerMixin,
     bugzilla_component = TreeForeignKeyField(read_only=False, required=False, allow_null=True)
     brew_package = serializers.CharField(required=False)
     active = serializers.BooleanField(required=False, default=True)
-    type = ChoiceSlugField(slug_field='name', queryset=ReleaseComponentType.objects.all(), required=False)
+    type = ChoiceSlugField(slug_field='name', queryset=ReleaseComponentType.objects.all(), required=False,
+                           allow_null=True)
 
     def update(self, instance, validated_data):
         signals.releasecomponent_serializer_extract_data.send(sender=self, validated_data=validated_data)
