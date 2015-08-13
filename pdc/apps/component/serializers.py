@@ -442,6 +442,11 @@ class ReleaseComponentRelatedField(serializers.RelatedField):
     def to_internal_value(self, data):
         if not isinstance(data, dict):
             raise serializers.ValidationError({'detail': "Input [%s] for ReleaseComponent must be a dict." % data})
+
+        if set(['id', 'release', 'global_component', 'name']) <= set(data):
+            raise serializers.ValidationError(
+                {'detail': "It's not allowed to provide 'id' and ['release', 'global_component', 'name'] together"})
+
         kwargs = dict()
         if 'id' in data:
             kwargs['id'] = data.get('id')
@@ -453,8 +458,6 @@ class ReleaseComponentRelatedField(serializers.RelatedField):
             rc = ReleaseComponent.objects.get(**kwargs)
         except ReleaseComponent.DoesNotExist:
             raise serializers.ValidationError({'detail': "ReleaseComponent [%s] doesn't exist" % data})
-        except Exception as ex:
-            raise serializers.ValidationError({'detail': 'Fail to get ReleaseComponent, reason: %s' % str(ex)})
         return rc
 
 
