@@ -443,9 +443,10 @@ class ReleaseComponentRelatedField(serializers.RelatedField):
         if not isinstance(data, dict):
             raise serializers.ValidationError({'detail': "Input [%s] for ReleaseComponent must be a dict." % data})
 
-        if set(['id', 'release', 'global_component', 'name']) <= set(data):
+        if ('id' in data and len(data.keys()) > 1) or \
+                ('release' in data and 'global_component' in data and 'name' in data and len(data.keys()) > 3):
             raise serializers.ValidationError(
-                {'detail': "It's not allowed to provide 'id' and ['release', 'global_component', 'name'] together"})
+                {'detail': "Only accept ['id'] or ['release', 'global_component', 'name']"})
 
         kwargs = dict()
         if 'id' in data:

@@ -2198,6 +2198,26 @@ class GroupRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNumChanges([])
 
+    def test_create_group_with_components_with_wrong_field(self):
+        url = reverse('componentgroup-list')
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd',
+                'components': [{"foo": "bar"}]}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNumChanges([])
+
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd',
+                'components': [{"iid": 1, "release": "foo"}]}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNumChanges([])
+
+        data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd',
+                'components': [{"id": 1, "release": "foo"}]}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNumChanges([])
+
     def test_create_group_without_component(self):
         url = reverse('componentgroup-list')
         data = {'group_type': 'type2', 'release': 'release-1.0', 'description': 'dd'}
