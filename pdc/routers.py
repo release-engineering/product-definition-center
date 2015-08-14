@@ -3,15 +3,6 @@
 # Licensed under The MIT License (MIT)
 # http://opensource.org/licenses/MIT
 #
-from collections import OrderedDict
-
-from django.core.urlresolvers import NoReverseMatch
-
-from rest_framework import views
-from rest_framework.reverse import reverse
-from rest_framework.response import Response
-
-from contrib.bulk_operations import bulk_operations
 
 from pdc.apps.auth import views as pdc_auth_views
 from pdc.apps.changeset import views as changeset_views
@@ -22,55 +13,10 @@ from pdc.apps.compose import views as compose_views
 from pdc.apps.repository import views as repo_views
 from pdc.apps.common import views as common_views
 from pdc.apps.package import views as rpm_views
+from pdc.apps.utils import SortedRouter
 
 
-def get_resolver_match(request):
-    try:
-        return request.resolver_match
-    except AttributeError:
-        from django.core.urlresolvers import resolve
-        return resolve(request.path_info)
-
-
-class PDCrouter(bulk_operations.BulkRouter):
-    """ Order the api url  """
-
-    def get_api_root_view(self):
-        """
-        Return a view to use as the API root.
-        """
-        api_root_dict = OrderedDict()
-        list_name = self.routes[0].name
-        for prefix, viewset, basename in self.registry:
-            api_root_dict[prefix] = list_name.format(basename=basename)
-
-        class APIRoot(views.APIView):
-            _ignore_model_permissions = True
-
-            def get(self, request, *args, **kwargs):
-                ret = OrderedDict()
-                namespace = get_resolver_match(request).namespace
-                sorted_api_root_dict = OrderedDict(sorted(api_root_dict.items()))
-                for key, url_name in sorted_api_root_dict.items():
-                    if namespace:
-                        url_name = namespace + ':' + url_name
-                    try:
-                        ret[key] = reverse(
-                            url_name,
-                            request=request,
-                            format=kwargs.get('format', None)
-                        )
-                    except NoReverseMatch:
-                        # Don't bail out if eg. no list routes exist, only detail routes.
-                        continue
-
-                return Response(ret)
-
-        return APIRoot.as_view()
-
-router = PDCrouter()
-
-# register the appropriate view sets here
+router = SortedRouter.PDCrouter()
 
 # register api token auth view
 router.register(r'auth/token', pdc_auth_views.TokenViewSet, base_name='token')
