@@ -411,6 +411,8 @@ class ReleaseComponentSerializer(DynamicFieldsSerializerMixin,
         if not isinstance(value, ReleaseComponentType):
             if value is not None and value.strip() != "":
                 value = get_object_or_404(ReleaseComponentType, name=value.strip())
+            else:
+                raise serializers.ValidationError("This field can't be set to null.")
         return value
 
     class Meta:
