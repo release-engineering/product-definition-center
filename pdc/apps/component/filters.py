@@ -81,6 +81,37 @@ class RoleContactFilter(FilterSet):
         fields = ('contact_role', 'email', 'username', 'mail_name')
 
 
+class GlobalComponentContactFilter(RoleContactFilter):
+    component = MultiValueFilter(name='global_component__name')
+    role = MultiValueFilter(name='contact_role__name')
+    contact_id = MultiValueFilter(name='contact')
+
+    class Meta:
+        model = RoleContact
+        fields = ('role', 'email', 'username', 'mail_name', 'component', 'contact_id')
+
+
+class ReleaseComponentContactFilter(RoleContactFilter):
+    component_id = MethodFilter(action='filter_by_component_id', widget=SelectMultiple)
+    role = MultiValueFilter(name='contact_role__name')
+    contact_id = MultiValueFilter(name='contact')
+
+    @value_is_not_empty
+    def filter_by_component_id(self, qs, value):
+        result = RoleContact.objects.none()
+        for component_id in value:
+            qs_own_contact = qs.filter(release_component__id=component_id)
+            if qs_own_contact.exists():
+                result = result | qs_own_contact
+            else:
+                result = result | qs.filter(global_component__releasecomponent__id=component_id).distinct()
+        return result.distinct()
+
+    class Meta:
+        model = RoleContact
+        fields = ('role', 'email', 'username', 'mail_name', 'component_id', 'contact_id')
+
+
 class ComponentFilter(ComposeFilterSet):
     name = MultiValueFilter()
     dist_git_path = MultiValueFilter()

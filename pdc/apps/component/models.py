@@ -14,7 +14,7 @@ from django.dispatch import receiver
 from mptt import models as mptt_models
 
 from pdc.apps.common.models import Label
-from pdc.apps.contact.models import RoleContact
+from pdc.apps.contact.models import Contact
 from pdc.apps.common import hacks
 from pdc.apps.release.models import Release
 from pdc.apps.release import signals
@@ -106,7 +106,7 @@ class GlobalComponent(models.Model):
     """Record generic component"""
 
     name            = models.CharField(max_length=100, unique=True)
-    contacts        = models.ManyToManyField(RoleContact, blank=True)
+    contacts        = models.ManyToManyField(Contact, through='contact.RoleContact', blank=True)
     dist_git_path   = models.CharField(max_length=200, blank=True, null=True)
     labels          = models.ManyToManyField(Label, blank=True)
     upstream        = models.OneToOneField(Upstream, blank=True, null=True)
@@ -162,7 +162,7 @@ class ReleaseComponent(models.Model):
                                                     related_name='release_components')
     name                        = models.CharField(max_length=100)
     dist_git_branch             = models.CharField(max_length=100, blank=True, null=True)
-    contacts                    = models.ManyToManyField(RoleContact, blank=True)
+    contacts        = models.ManyToManyField(Contact, through='contact.RoleContact', blank=True)
     brew_package = models.CharField(max_length=100, blank=True, null=True)
     active = models.BooleanField(default=True)
 

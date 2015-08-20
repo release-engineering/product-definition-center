@@ -54,6 +54,12 @@ router.register(r'global-components/(?P<instance_pk>[^/.]+)/contacts',
 router.register(r'global-components/(?P<instance_pk>[^/.]+)/labels',
                 component_views.GlobalComponentLabelViewSet,
                 base_name='globalcomponentlabel')
+router.register(r'global-component-contacts',
+                component_views.GlobalComponentContactInfoViewSet,
+                base_name='globalcomponentcontacts')
+router.register(r'release-component-contacts',
+                component_views.ReleaseComponentContactInfoViewSet,
+                base_name='releasecomponentcontacts')
 router.register(r'release-components',
                 component_views.ReleaseComponentViewSet,
                 base_name='releasecomponent')

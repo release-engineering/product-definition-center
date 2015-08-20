@@ -151,11 +151,14 @@ class RoleContactSpecificManager(models.Manager):
 
 
 class RoleContact(models.Model):
-
     contact_role = models.ForeignKey(ContactRole, related_name='role_contacts',
                                      on_delete=models.PROTECT)
     contact      = models.ForeignKey(Contact, related_name='role_contacts',
                                      on_delete=models.PROTECT)
+    global_component = models.ForeignKey('component.GlobalComponent', blank=True, null=True,
+                                         related_name='role_contacts')
+    release_component = models.ForeignKey('component.ReleaseComponent', blank=True, null=True,
+                                          related_name='role_contacts')
 
     objects = models.Manager()
     specific_objects = RoleContactSpecificManager()

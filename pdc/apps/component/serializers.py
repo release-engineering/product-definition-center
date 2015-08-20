@@ -5,6 +5,7 @@
 #
 import json
 
+from copy import deepcopy
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
@@ -15,13 +16,12 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from pdc.apps.contact.models import Contact, ContactRole
-from pdc.apps.contact.serializers import RoleContactSerializer
+from pdc.apps.contact.serializers import RoleContactSerializer, ContactField
 from pdc.apps.common.serializers import DynamicFieldsSerializerMixin, LabelSerializer, StrictSerializerMixin
 from pdc.apps.common.fields import ChoiceSlugField
 from pdc.apps.release.models import Release
 from pdc.apps.common.hacks import convert_str_to_int
 from .models import (GlobalComponent,
-                     RoleContact,
                      ReleaseComponent,
                      Upstream,
                      BugzillaComponent,
@@ -30,6 +30,7 @@ from .models import (GlobalComponent,
                      ReleaseComponentType,
                      ReleaseComponentRelationshipType,
                      ReleaseComponentRelationship)
+from pdc.apps.contact.models import RoleContact
 from . import signals
 
 
@@ -534,3 +535,56 @@ class ReleaseComponentRelationshipSerializer(StrictSerializerMixin, serializers.
     class Meta:
         model = ReleaseComponentRelationship
         fields = ('id', 'type', 'from_component', 'to_component')
+
+
+class GlobalComponentContactSerializer(StrictSerializerMixin, serializers.ModelSerializer):
+    component = serializers.SlugRelatedField(source='global_component', slug_field='name',
+                                             read_only=False, queryset=GlobalComponent.objects.all())
+    role = serializers.SlugRelatedField(source='contact_role', slug_field='name',
+                                        read_only=False, queryset=ContactRole.objects.all())
+    contact = ContactField()
+
+    class Meta:
+        model = RoleContact
+        fields = ('id', 'component', 'role', 'contact')
+
+
+class ReleaseComponentContactSerializer(StrictSerializerMixin, serializers.ModelSerializer):
+    component = serializers.SlugRelatedField(source='release_component', slug_field='name',
+                                             queryset=ReleaseComponent.objects.all())
+    release = serializers.SlugRelatedField(source='release_component.release', slug_field='release_id',
+                                           queryset=ReleaseComponent.objects.all())
+    role = serializers.SlugRelatedField(source='contact_role', slug_field='name',
+                                        read_only=False, queryset=ContactRole.objects.all())
+    contact = ContactField()
+    component_id = serializers.SlugRelatedField(source='release_component', slug_field='id',
+                                                queryset=ReleaseComponent.objects.all())
+
+    def __init__(self, *args, **kwargs):
+        super(ReleaseComponentContactSerializer, self).__init__(*args, **kwargs)
+        self.inherited_role_contact_to_rc = self.context.get('view').inherited_role_contact_to_rc
+
+    def to_representation(self, instance):
+        representation = super(ReleaseComponentContactSerializer, self).to_representation(instance)
+        representation['from_global'] = False
+        # ReleaseComponent instance(s) list
+        release_components = self.inherited_role_contact_to_rc.get(instance)
+        result = []
+
+        if instance.release_component:
+            result.append(representation)
+        if release_components:
+            for rc in release_components:
+                result_item = deepcopy(representation)
+                result_item.update({'component': rc.name,
+                                    'component_id': rc.id,
+                                    'release': rc.release.release_id,
+                                    'from_global': True})
+                result.append(result_item)
+        if len(result) == 1:
+            return result[0]
+        return result
+
+    class Meta:
+        model = RoleContact
+        fields = ('component', 'component_id', 'release', 'id', 'role', 'contact')
