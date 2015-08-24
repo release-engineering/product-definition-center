@@ -74,7 +74,8 @@ router.register(r'composes/(?P<compose_id>[^/]+)/rpm-mapping',
                 compose_views.ComposeRPMMappingView,
                 base_name='composerpmmapping')
 router.register(r'compose-rpms', compose_views.ComposeRPMView)
-router.register(r'compose-images', compose_views.ComposeImageView)
+router.register(r'compose-images', compose_views.ComposeImageView,
+                base_name='composeimages')
 
 router.register(r'rpc/release/import-from-composeinfo',
                 release_views.ReleaseImportView,
@@ -128,7 +129,8 @@ router.register('releases/(?P<release_id>[^/]+)/rpm-mapping',
 # register package view sets
 router.register(r'rpms', rpm_views.RPMViewSet, base_name='rpms')
 router.register(r'images', rpm_views.ImageViewSet)
-router.register(r'build-images', rpm_views.BuildImageViewSet)
+router.register(r'build-images', rpm_views.BuildImageViewSet,
+        base_name="buildimages")
 
 router.register(r'compose/package',
                 compose_views.FindComposeWithOlderPackageViewSet,
