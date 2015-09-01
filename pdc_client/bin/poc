@@ -24,7 +24,7 @@ from requests_kerberos import HTTPKerberosAuth
 #   * use rolecontact in components;
 
 version = "0.1.5"
-host_name = "https://pdc.app.qa.eng.nay.redhat.com"  # QA Server
+host_name = "https://pdc.example.com/"  # Example Server
 headers = {"Content-type": "application/json"}
 
 
