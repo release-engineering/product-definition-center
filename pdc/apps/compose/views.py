@@ -1223,7 +1223,7 @@ class FindComposeByReleaseRPMViewSet(StrictQueryParamMixin, FindComposeMixin, vi
         return Response(self._get_compose_for_release())
 
 
-class FindLatestComposeByComposeRPMViewSet(StrictQueryParamMixin, FindComposeMixin, viewsets.GenericViewSet):
+class FindOlderComposeByComposeRPMViewSet(StrictQueryParamMixin, FindComposeMixin, viewsets.GenericViewSet):
     """
     This API endpoint allows finding the latest compose older than specified compose
     which contains a different version of the specified package.
@@ -1249,7 +1249,7 @@ class FindLatestComposeByComposeRPMViewSet(StrictQueryParamMixin, FindComposeMix
 
         __Method__: GET
 
-        __URL__: $LINK:findlatestcomposebycr-list:compose_id:rpm_name$
+        __URL__: $LINK:findoldercomposebycr-list:compose_id:rpm_name$
 
         __Query params__:
 
