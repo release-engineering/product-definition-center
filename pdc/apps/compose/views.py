@@ -1297,7 +1297,7 @@ class FindComposeWithOlderPackageViewSet(StrictQueryParamMixin, FindComposeMixin
 
         Above 2 functions in this endpoint are deprecated. Please use
         $LINK:findcomposebyrr-list:release_id:rpm_name$ and
-        $LINK:findlatestcomposebycr-list:compose_id:rpm_name$ instead.
+        $LINK:findoldercomposebycr-list:compose_id:rpm_name$ instead.
 
         The ordering of composes is performed by the *productmd* library. It
         first compares compose date, then compose type
