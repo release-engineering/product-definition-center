@@ -282,7 +282,7 @@ class GlobalComponentContactRESTTestCase(TestCaseWithChangeSetMixin, APITestCase
             contact_role=pm_type)
 
         python = models.GlobalComponent.objects.get(name='MySQL-python')
-        python.contacts.add(pm_contact, mail_contact)
+        python.role_contacts.add(pm_contact, mail_contact)
 
         self.droplets = [pm_contact, mail_contact, another_contact, pm_contact_2]
 
@@ -290,7 +290,7 @@ class GlobalComponentContactRESTTestCase(TestCaseWithChangeSetMixin, APITestCase
         super(GlobalComponentContactRESTTestCase, self).tearDown()
 
         python = models.GlobalComponent.objects.get(name='MySQL-python')
-        python.contacts.clear()
+        python.role_contacts.clear()
         for droplet in self.droplets:
             droplet.delete()
 
@@ -646,7 +646,7 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             contact_role=qe_type)
 
         gc_python = models.GlobalComponent.objects.get(name='python')
-        gc_python.contacts.add(pm_contact, mail_contact)
+        gc_python.role_contacts.add(pm_contact, mail_contact)
 
         rc_python27 = models.ReleaseComponent.objects.get(name='python27')
         # Initialize release component contact
@@ -656,14 +656,14 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
                 username=base_name + str(i),
                 email=base_name + str(i) + '@example.com',
                 contact_role='QE_Group')
-            rc_python27.contacts.add(contact)
+            rc_python27.role_contacts.add(contact)
 
         # Append a new contact with a new contact_role
         contact = RoleContact.specific_objects.create(
             username='new',
             email=base_name + '@example.com',
             contact_role='type_xx')
-        rc_python27.contacts.add(contact)
+        rc_python27.role_contacts.add(contact)
 
         # Create an inactive release as well as a release component on top of it.
         pv = ProductVersion.objects.create(
@@ -1421,7 +1421,7 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             username='release_component',
             email='release@example.com',
             contact_role='pm')
-        models.ReleaseComponent.objects.get(pk=1).contacts.add(contact)
+        models.ReleaseComponent.objects.get(pk=1).role_contacts.add(contact)
         response = self.client.get(url, data, format='json')
         rc_contact_pm = response.data[3]
 
@@ -1434,7 +1434,7 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             username='release_component',
             email='release@example.com',
             contact_role='pm')
-        models.ReleaseComponent.objects.get(pk=1).contacts.add(contact)
+        models.ReleaseComponent.objects.get(pk=1).role_contacts.add(contact)
         response = self.client.get(url, {'email': 'person1@test.com'}, format='json')
         self.assertEqual(response.data['count'], 0)
 
@@ -1444,12 +1444,12 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             username='release_component',
             email='release@example.com',
             contact_role='pm')
-        models.ReleaseComponent.objects.get(pk=1).contacts.add(contact)
+        models.ReleaseComponent.objects.get(pk=1).role_contacts.add(contact)
         contact = RoleContact.specific_objects.create(
             username='gc_person_1',
             email='person1@test.com',
             contact_role='type_YYY')
-        models.GlobalComponent.objects.get(pk=1).contacts.add(contact)
+        models.GlobalComponent.objects.get(pk=1).role_contacts.add(contact)
         response = self.client.get(url, {'email': 'person1@test.com'}, format='json')
         self.assertEqual(response.data['count'], 1)
 
@@ -1661,7 +1661,7 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.delete(url, [5, 6, 7], format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         c = models.ReleaseComponent.objects.get(pk=1)
-        self.assertEqual(c.contacts.count(), 0)
+        self.assertEqual(c.role_contacts.count(), 0)
 
     def test_delete_inherited_contact(self):
         url = reverse('releasecomponentcontact-detail', kwargs={'instance_pk': 1, 'pk': 2})
@@ -1754,11 +1754,11 @@ class ReleaseCloneWithComponentsTestCase(TestCaseWithChangeSetMixin, APITestCase
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNumChanges([3, 6])
         contacts = models.ReleaseComponent.objects.get(release__release_id='release-1.1',
-                                                       name='python27').contacts.all()
+                                                       name='python27').role_contacts.all()
         self.assertEqual(1, len(contacts))
         self.assertEqual('qe_ack', contacts[0].contact_role.name)
         self.assertEqual('person1', contacts[0].contact.person.username)
-        count = sum([row.contacts.all().count() for row in models.ReleaseComponent.objects.all()])
+        count = sum([row.role_contacts.all().count() for row in models.ReleaseComponent.objects.all()])
         self.assertEqual(2, count)
 
     def test_clone_components_change_dist_git_branch(self):

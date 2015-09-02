@@ -83,7 +83,7 @@ class RoleContactFilter(FilterSet):
 
 class GlobalComponentContactFilter(RoleContactFilter):
     component = MultiValueFilter(name='global_component__name')
-    role = MultiValueFilter(name='contact_role__name')
+    role = MultiValueFilter(name='contact_roles__name')
     contact_id = MultiValueFilter(name='contact')
 
     class Meta:
@@ -93,7 +93,7 @@ class GlobalComponentContactFilter(RoleContactFilter):
 
 class ReleaseComponentContactFilter(RoleContactFilter):
     component_id = MethodFilter(action='filter_by_component_id', widget=SelectMultiple)
-    role = MultiValueFilter(name='contact_role__name')
+    role = MultiValueFilter(name='contact_roles__name')
     contact_id = MultiValueFilter(name='contact')
 
     @value_is_not_empty
@@ -137,29 +137,29 @@ class ComponentFilter(ComposeFilterSet):
 
             if not contact_role:
                 if not persons.exists() and mails.exists():
-                    return qs.filter(contacts__contact__in=mails).distinct()
+                    return qs.filter(role_contacts__contact__in=mails).distinct()
 
                 elif not mails.exists() and persons.exists():
-                    return qs.filter(contacts__contact__in=persons).distinct()
+                    return qs.filter(role_contacts__contact__in=persons).distinct()
 
                 else:
-                    return qs.filter(Q(contacts__object_id__in=persons) | Q(
-                        contacts__object_id__in=mails)).distinct()
+                    return qs.filter(Q(role_contacts__object_id__in=persons) | Q(
+                        role_contacts__object_id__in=mails)).distinct()
             else:
                 if not persons.exists() and mails.exists():
-                    contacts = RoleContact.objects.filter(contact__in=mails,
-                                                          contact_role__name__in=contact_role)
+                    role_contacts = RoleContact.objects.filter(contact__in=mails,
+                                                               contact_role__name__in=contact_role)
 
                 elif not mails.exists() and persons.exists():
-                    contacts = RoleContact.objects.filter(contact__in=persons,
-                                                          contact_role__name__in=contact_role)
+                    role_contacts = RoleContact.objects.filter(contact__in=persons,
+                                                               contact_role__name__in=contact_role)
 
                 else:
-                    contacts = RoleContact.objects.filter(
+                    role_contacts = RoleContact.objects.filter(
                         Q(contact__in=persons) | Q(contact__in=mails),
                         contact_role__name__in=contact_role)
 
-                return qs.filter(contacts=contacts).distinct()
+                return qs.filter(role_contacts=role_contacts).distinct()
 
         else:
             return qs
@@ -205,11 +205,11 @@ class ReleaseComponentFilter(ComposeFilterSet):
                     contact_Q |= Q(contact__in=persons, )
                 if mails.exists():
                     contact_Q |= Q(contact__in=mails, )
-                contacts = RoleContact.objects.filter(contact_Q)
+                role_contacts = RoleContact.objects.filter(contact_Q)
 
                 qs = qs.filter(
-                    Q(contacts__in=contacts) |
-                    Q(global_component__contacts__in=contacts)
+                    Q(role_contacts__in=role_contacts) |
+                    Q(global_component__role_contacts__in=role_contacts)
                 )
 
                 qs = qs.distinct()
@@ -222,21 +222,21 @@ class ReleaseComponentFilter(ComposeFilterSet):
                     contact_Q |= Q(contact__in=persons, )
                 if mails.exists():
                     contact_Q |= Q(contact__in=mails, )
-                contacts = RoleContact.objects.filter(contact_Q)
+                role_contacts = RoleContact.objects.filter(contact_Q)
 
                 qs = qs.filter(
                     (Q(
-                        contacts__contact_role__in=contact_roles) & Q(
-                        contacts__in=contacts)) |
+                        role_contacts__contact_role__in=contact_roles) & Q(
+                        role_contacts__in=role_contacts)) |
                     (Q(
-                        global_component__contacts__contact_role__in=contact_roles) & Q(
-                        global_component__contacts__in=contacts))
+                        global_component__role_contacts__contact_role__in=contact_roles) & Q(
+                        global_component__role_contacts__in=role_contacts))
                 )
 
                 qs = qs.distinct()
 
             # NOTE: For the PDC-184, if a release component has the same
-            # contact type as global component contacts, it will overwrite
+            # contact type as global component role_contacts, it will overwrite
             # the global component contact and show in the output json string.
             # ----------------------------------------------------------------
             # |  Global Component Contacts   |   Release Component Contacts  |
@@ -267,14 +267,14 @@ class ReleaseComponentFilter(ComposeFilterSet):
             # Maybe we could use database view to filter it with SQL.
             id_include_inherited = []
             for release_component in qs.iterator():
-                release_contacts = release_component.contacts.filter(
-                    contact_role__in=set(contacts.values_list('contact_role', flat=True)))
-                global_contacts = release_component.global_component.contacts.filter(
-                    id__in=[obj.id for obj in contacts])
+                release_role_contacts = release_component.role_contacts.filter(
+                    contact_role__in=set(role_contacts.values_list('contact_role', flat=True)))
+                global_role_contacts = release_component.global_component.role_contacts.filter(
+                    id__in=[obj.id for obj in role_contacts])
 
-                if release_contacts.exists() and global_contacts.exists():
-                    release_contact_roles = set([contact.contact_role for contact in release_contacts])
-                    global_contact_roles = set([contact.contact_role for contact in global_contacts])
+                if release_role_contacts.exists() and global_role_contacts.exists():
+                    release_contact_roles = set([contact.contact_role for contact in release_role_contacts])
+                    global_contact_roles = set([contact.contact_role for contact in global_role_contacts])
 
                     if global_contact_roles - release_contact_roles:
                         id_include_inherited.append(release_component.id)

@@ -113,7 +113,7 @@ class HackedContactSerializer(RoleContactSerializer):
                                           json.dumps(contact.export()))
         component_class = self.view.model
 
-        if component_class.objects.get(pk=self.instance_pk).contacts.filter(pk=contact.pk).exists():
+        if component_class.objects.get(pk=self.instance_pk).role_contacts.filter(pk=contact.pk).exists():
             model_name = six.text_type(capfirst(component_class._meta.verbose_name))
             raise serializers.ValidationError({"detail": "%s contact with this %s and Contact already exists."
                                               % (model_name, model_name)})
@@ -131,17 +131,18 @@ class HackedContactSerializer(RoleContactSerializer):
         existed_contacts = component.contacts.all()
 
         if isinstance(self.validated_data, list):
-            contacts = [self.get_object_from_db(item) for item in self.validated_data if item not in existed_contacts]
+            role_contacts = [self.get_object_from_db(item)
+                             for item in self.validated_data if item not in existed_contacts]
 
-            component.contacts.add(*contacts)
+            component.role_contacts.add(*role_contacts)
 
             if self.validated_data['_deleted']:
                 [self.delete_object(item) for item in self.validated_data['_deleted']]
         else:
-            contacts = self.get_object_from_db(self.validated_data)
-            component.contacts.add(contacts)
+            role_contacts = self.get_object_from_db(self.validated_data)
+            component.role_contacts.add(role_contacts)
 
-        return contacts
+        return role_contacts
 
     def get_object_from_db(self, item):
         contact = RoleContact.objects.get(**{
@@ -182,7 +183,7 @@ class HackedContactField(serializers.Field):
         #             it's not provided when used as a field, so we should inject one.
         if 'extra_kwargs' not in self.context or 'instance_pk' not in self.context['extra_kwargs']:
             self.context['extra_kwargs'] = {'instance_pk': obj.pk}
-        return obj.contacts.all()
+        return obj.role_contacts.all()
 
 
 class UpstreamSerializer(StrictSerializerMixin, serializers.ModelSerializer):

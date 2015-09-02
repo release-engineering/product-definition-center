@@ -169,7 +169,8 @@ class RoleContact(models.Model):
 
     class Meta:
         unique_together = (
-            ("contact", "contact_role"),
+            ("contact", "contact_role", 'global_component'),
+            ("contact", "contact_role", 'release_component'),
         )
 
     def export(self, fields=None):

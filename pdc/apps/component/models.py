@@ -14,7 +14,7 @@ from django.dispatch import receiver
 from mptt import models as mptt_models
 
 from pdc.apps.common.models import Label
-from pdc.apps.contact.models import Contact
+from pdc.apps.contact.models import Contact, RoleContact
 from pdc.apps.common import hacks
 from pdc.apps.release.models import Release
 from pdc.apps.release import signals
@@ -338,7 +338,7 @@ def clone_release_components_and_groups(sender, request, original_release, relea
     rc_map = dict()
     for rc in ReleaseComponent.objects.filter(release=original_release):
         org_rc_pk = rc.pk
-        contacts = rc.contacts.all()
+        role_contacts = rc.role_contacts.all()
         rc.pk = None
         if not include_inactive and not rc.active:
             continue
@@ -346,7 +346,9 @@ def clone_release_components_and_groups(sender, request, original_release, relea
         if new_dist_git_branch:
             rc.dist_git_branch = new_dist_git_branch
         rc.save()
-        rc.contacts.add(*list(contacts))
+        for r_c in role_contacts:
+            obj = RoleContact.objects.create(contact_role=r_c.contact_role, contact=r_c.contact)
+            rc.role_contacts.add(obj)
         request.changeset.add("ReleaseComponent", rc.pk, "null", json.dumps(rc.export()))
         rc_map[org_rc_pk] = rc
 

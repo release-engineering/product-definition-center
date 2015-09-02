@@ -348,7 +348,7 @@ class GlobalComponentContactViewSet(HackedComponentContactMixin,
     def get_queryset(self):
         gc_id = self.kwargs.get('instance_pk')
         gc = get_object_or_404(GlobalComponent, id=gc_id)
-        return gc.contacts.all()
+        return gc.role_contacts.all()
 
     def list(self, request, *args, **kwargs):
         """
@@ -440,8 +440,8 @@ class GlobalComponentContactViewSet(HackedComponentContactMixin,
         gc = get_object_or_404(GlobalComponent, id=gc_id)
 
         old_value = json.dumps(gc.export())
-        if contact in gc.contacts.all():
-            gc.contacts.remove(contact)
+        if contact in gc.role_contacts.all():
+            gc.role_contacts.remove(contact)
             request.changeset.add("globalcomponent", gc.pk, old_value, json.dumps(gc.export()))
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
@@ -1083,14 +1083,14 @@ class ReleaseComponentViewSet(viewsets.PDCModelViewSet):
             pre_export = row.export()
             # iterate new contacts.
             for obj in contact_serializer.validated_data:
-                if not row.contacts.filter(pk=obj.pk).exists():
-                    overwrite_contact = row.contacts.filter(contact_role_id=obj.contact_role_id)
+                if not row.role_contacts.filter(pk=obj.pk).exists():
+                    overwrite_contact = row.role_contacts.filter(contact_role_id=obj.contact_role_id)
                     if overwrite_contact.exists():
                         # release component has the same contact type contact.
                         # drop it and insert new one.
                         overwrite_contact.delete()
                     # save new contact.
-                    row.contacts.add(obj)
+                    row.role_contacts.add(obj)
             request.changeset.add("releasecomponent",
                                   row.pk,
                                   json.dumps(pre_export),
@@ -1129,7 +1129,7 @@ class ReleaseComponentContactViewSet(HackedComponentContactMixin,
     def get_queryset(self):
         rc_id = self.kwargs.get("instance_pk", None)
         release_component = get_object_or_404(ReleaseComponent, pk=rc_id)
-        return release_component.contacts.all()
+        return release_component.role_contacts.all()
 
     def get_serializer_context(self):
         super_class = super(ReleaseComponentContactViewSet, self)
@@ -1181,8 +1181,8 @@ class ReleaseComponentContactViewSet(HackedComponentContactMixin,
         rc_id = kwargs.get("instance_pk", None)
         # Release Component object
         rc = get_object_or_404(ReleaseComponent, pk=rc_id)
-        gcc_qs = GlobalComponent.objects.get(pk=rc.global_component_id).contacts.all()
-        rcc_qs = rc.contacts.all()
+        gcc_qs = GlobalComponent.objects.get(pk=rc.global_component_id).role_contacts.all()
+        rcc_qs = rc.role_contacts.all()
         # Contact type based inheritance mechanisms(excerpted from JIRA PDC-184)
         # - Input without contact_role, output contacts including
         #   release_component's contacts and global_component's contacts which
@@ -1327,11 +1327,11 @@ class ReleaseComponentContactViewSet(HackedComponentContactMixin,
                             status=status.HTTP_404_NOT_FOUND)
 
         old_value = json.dumps(rc.export())
-        if contact in rc.contacts.all():
-            rc.contacts.remove(contact)
+        if contact in rc.role_contacts.all():
+            rc.role_contacts.remove(contact)
             request.changeset.add("releasecomponent", rc.pk, old_value, json.dumps(rc.export()))
             return Response(status=status.HTTP_204_NO_CONTENT)
-        elif contact in rc.global_component.contacts.all():
+        elif contact in rc.global_component.role_contacts.all():
             return Response(
                 data={'detail': 'Contact[%s] is inherited from GlobalComponent[%s] and can only be deleted from there.'
                       % (pk, rc.global_component.pk)},
