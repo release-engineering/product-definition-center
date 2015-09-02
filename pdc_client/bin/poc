@@ -1,0 +1,207 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+#
+# Copyright (c) 2015 Red Hat
+# Licensed under The MIT License (MIT)
+# http://opensource.org/licenses/MIT
+#
+# It's better to copy this script to $PATH.
+from json import dumps
+import optparse
+
+import sys
+from urlparse import urlparse, parse_qs
+
+import requests
+from requests_kerberos import HTTPKerberosAuth
+
+
+# Changelogs
+# v0.1.5
+# - contact model improvement
+#   * contact_type -> contact_role;
+#   * person_name -> username;
+#   * use rolecontact in components;
+
+version = "0.1.5"
+host_name = "https://pdc.example.com/"  # Example Server
+headers = {"Content-type": "application/json"}
+
+
+class MultipleOption(optparse.Option):
+    ACTIONS = optparse.Option.ACTIONS + ("extend",)
+    STORE_ACTIONS = optparse.Option.STORE_ACTIONS + ("extend",)
+    TYPED_ACTIONS = optparse.Option.TYPED_ACTIONS + ("extend",)
+    ALWAYS_TYPED_ACTIONS = optparse.Option.ALWAYS_TYPED_ACTIONS + ("extend",)
+
+    def take_action(self, action, dest, opt, value, values, parser):
+        if action == "extend":
+            lvalue = value.split(",")
+            values.ensure_value(dest, []).extend(lvalue)
+        else:
+            optparse.Option.take_action(self, action, dest, opt, value, values,
+                                        parser)
+
+
+def build_parser():
+    parser = optparse.OptionParser(option_class=MultipleOption, version=version)
+    # control options
+    parser.add_option("-j", "--json", action="store_true", default=False,
+                      help="Print the response in json format.")
+    parser.add_option("--host", default=host_name,
+                      help="PDC server host name")
+
+    # query options
+    group = optparse.OptionGroup(parser,
+                                 title="Query parameters")
+    group.add_options((
+        MultipleOption("--release", help="Release id", action="extend"),
+        MultipleOption("--contact-role", help="Contact role",
+                       dest="contact_role", action="extend"),
+        MultipleOption("--component", help="Component name", action="extend"),
+        MultipleOption("--email", help="Person or mail list email address",
+                       action="extend"),
+    ))
+    parser.add_option_group(group)
+    return parser
+
+
+def status_code_handler(code, reason):
+    if code == requests.codes.bad_request:
+        print "Client send invalid or unacceptable data."
+    elif code == requests.codes.unauthorized:
+        print "Please run kinit before use poc."
+    elif code == requests.codes.not_found:
+        print "Matching query does not exist."
+    elif code >= requests.codes.internal_server_error:
+        print "Server error: %s" % reason
+    else:
+        print "Client error: %s" % reason
+    sys.exit(code)
+
+
+def request(*args, **kwargs):
+    params = {
+        "verify": False,
+        "headers": headers,
+    }
+    kwargs.update(params)
+    response = requests.get(*args, **kwargs)
+
+    if response.ok:
+        return response.json()
+    else:
+        status_code_handler(response.status_code, response.reason)
+
+
+def obtain_token():
+    kwargs = {
+        "auth": HTTPKerberosAuth(),
+        "url": "%s%s" % (host_name, "/rest_api/v1/auth/token/obtain/"),
+    }
+    token = request(**kwargs)
+    headers['Authorization'] = "Token %s" % token['token']
+
+
+def get_url_and_query_params(options):
+    keys = ('release', 'component', 'email', 'contact-role',)
+    params = dict((key, value) for key, value in options.__dict__.items() if
+                  value is not None and key in keys)
+
+    if 'release' in params:
+        if 'component' in params:
+            params['global_component'] = params.pop('component')
+        kwargs = {
+            "params": params,
+            "url": "%s%s" % (host_name, "/rest_api/v1/release-components/"),
+        }
+        return (kwargs,)
+    elif 'component' in params:
+        params['name'] = params.pop('component')
+        kwargs = {
+            "params": params,
+            "url": "%s%s" % (host_name, "/rest_api/v1/global-components/"),
+        }
+        return (kwargs,)
+    else:
+        return ({
+                    "params": params,
+                    "url": "%s%s" % (
+                        host_name, "/rest_api/v1/global-components/"),
+                }, {
+                    "params": params,
+                    "url": "%s%s" % (
+                        host_name, "/rest_api/v1/release-components/"),
+                })
+
+
+def pagination(options):
+    for kwargs in get_url_and_query_params(options):
+        has_next = 1
+        while has_next:
+            response = request(**kwargs)
+            if not response['results']:
+                break
+            yield response['results']
+            if response['next']:
+                kwargs['params'] = parse_qs(urlparse(response['next']).query)
+            else:
+                has_next = 0
+
+
+def print_table(chunked_json):
+    row_format = "{:<25}" * 4
+    header_format = "{:^25}" * 4
+    print header_format.format("component", "release", "contact-role",
+                               "contact")
+    print "=" * 100
+
+    for chunked in chunked_json:
+        if not chunked:
+            break
+        for object in chunked:
+            if 'release' in object:
+                release = object['release']['release_id']
+            else:
+                release = "<global>"
+            component = object['name']
+            for contact in object['contacts']:
+                contact_role = contact['contact_role']
+                contact_info = contact['contact']['email']
+                print row_format.format(component, release, contact_role,
+                                        contact_info)
+
+
+def print_json(chunked_json):
+    head_comma = False
+    print "["
+    for chunked in chunked_json:
+        if not chunked:
+            break
+        encode_string = dumps(chunked, indent=4)
+        if not head_comma:
+            print encode_string[1:-2],
+            head_comma = True
+        else:
+            print ','
+            print encode_string[1:-2],
+    print "]"
+
+
+def execute_cmd():
+    parser = build_parser()
+    options, args = parser.parse_args()
+
+    if len(args):
+        print "Can not parse the positional arguments: %s" % ", ".join(args)
+        parser.print_help()
+        sys.exit(1)
+
+    obtain_token()
+
+    print_func = print_json if options.json else print_table
+    print_func(pagination(options))
+
+
+if __name__ == '__main__':
+    execute_cmd()
