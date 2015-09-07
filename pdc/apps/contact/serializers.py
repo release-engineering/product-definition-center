@@ -7,6 +7,7 @@ import json
 
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from pdc.apps.common.serializers import DynamicFieldsSerializerMixin, StrictSerializerMixin
@@ -44,15 +45,10 @@ class ContactRoleField(serializers.CharField):
     def to_internal_value(self, data):
         name = super(ContactRoleField, self).to_internal_value(data)
         if name:
-            contact_role, created = ContactRole.objects.get_or_create(name=name)
-            if created:
-                request = self.context.get('request', None)
-                model_name = ContentType.objects.get_for_model(contact_role).model
-                if request and request.changeset:
-                    request.changeset.add(model_name,
-                                          contact_role.id,
-                                          'null',
-                                          json.dumps(contact_role.export()))
+            try:
+                contact_role = ContactRole.objects.get(name=name)
+            except ObjectDoesNotExist:
+                raise serializers.ValidationError('Could not find the contact role with name %s.' % name)
             return contact_role
         else:
             return None
