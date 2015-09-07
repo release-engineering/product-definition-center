@@ -1064,9 +1064,9 @@ class FilterBugzillaProductsAndComponents(StrictQueryParamMixin,
             [
                 {
                     "bugzilla_component": [
-                        null
+                        <string>
                     ],
-                    "bugzilla_product": null
+                    "bugzilla_product": <string>
                 },
                 ...
             ]
@@ -1077,9 +1077,9 @@ class FilterBugzillaProductsAndComponents(StrictQueryParamMixin,
             [
                 {
                     "bugzilla_component": [
-                        null
+                        <string>
                     ],
-                    "bugzilla_product": null
+                    "bugzilla_product": <string>
                 }
             ]
         """
