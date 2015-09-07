@@ -1363,6 +1363,7 @@ class ReleaseComponentContactViewSet(HackedComponentContactMixin,
 
 class GlobalComponentContactInfoViewSet(viewsets.StrictQueryParamMixin,
                                         viewsets.ChangeSetUpdateModelMixin,
+                                        viewsets.ChangeSetDestroyModelMixin,
                                         FlatResultMixin,
                                         rest_framework.viewsets.GenericViewSet):
 
@@ -1403,6 +1404,7 @@ class ReleaseComponentContactInfoViewSet(viewsets.StrictQueryParamMixin,
                                          viewsets.ChangeSetUpdateModelMixin,
                                          mixins.RetrieveModelMixin,
                                          mixins.ListModelMixin,
+                                         viewsets.ChangeSetDestroyModelMixin,
                                          FlatResultMixin,
                                          rest_framework.viewsets.GenericViewSet):
 
@@ -1445,7 +1447,7 @@ class ReleaseComponentContactInfoViewSet(viewsets.StrictQueryParamMixin,
         return Response(serializer.to_representation(instance))
 
     def destroy(self, request, *args, **kwargs):
-        return super(ReleaseComponentContactInfoViewSet, self).destory(request, *args, **kwargs)
+        return super(ReleaseComponentContactInfoViewSet, self).destroy(request, *args, **kwargs)
 
 
 class BugzillaComponentViewSet(viewsets.PDCModelViewSet):

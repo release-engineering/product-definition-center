@@ -100,11 +100,11 @@ class ReleaseComponentContactFilter(RoleContactFilter):
     def filter_by_component_id(self, qs, value):
         result = RoleContact.objects.none()
         for component_id in value:
-            qs_own_contact = qs.filter(release_component__id=component_id)
+            qs_own_contact = qs.filter(release_components__id=component_id)
             if qs_own_contact.exists():
                 result = result | qs_own_contact
             else:
-                result = result | qs.filter(global_component__releasecomponent__id=component_id).distinct()
+                result = result | qs.filter(global_components__releasecomponent__id=component_id).distinct()
         return result.distinct()
 
     class Meta:
