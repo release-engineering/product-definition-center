@@ -1064,9 +1064,10 @@ class FilterBugzillaProductsAndComponents(StrictQueryParamMixin,
             [
                 {
                     "bugzilla_component": [
-                        GConf1, GConf2
+                        string,
+                        ...
                     ],
-                    "bugzilla_product": Fedora
+                    "bugzilla_product": string
                 },
                 ...
             ]
@@ -1077,9 +1078,9 @@ class FilterBugzillaProductsAndComponents(StrictQueryParamMixin,
             [
                 {
                     "bugzilla_component": [
-                        GConf1, GConf2
+                        "GConf1", "GConf2"
                     ],
-                    "bugzilla_product": Fedora
+                    "bugzilla_product": "Fedora"
                 }
             ]
         """
