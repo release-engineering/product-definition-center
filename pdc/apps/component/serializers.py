@@ -128,7 +128,7 @@ class HackedContactSerializer(RoleContactSerializer):
         instance_pk = self.context['extra_kwargs']['instance_pk']
         component_class = self.context['view'].model
         component = component_class.objects.get(pk=instance_pk)
-        existed_contacts = component.contacts.all()
+        existed_contacts = component.role_contacts.all()
 
         if isinstance(self.validated_data, list):
             role_contacts = [self.get_object_from_db(item)
@@ -539,11 +539,24 @@ class ReleaseComponentRelationshipSerializer(StrictSerializerMixin, serializers.
 
 
 class GlobalComponentContactSerializer(StrictSerializerMixin, serializers.ModelSerializer):
-    component = serializers.SlugRelatedField(source='global_component', slug_field='name',
-                                             read_only=False, queryset=GlobalComponent.objects.all())
+    component = serializers.SlugRelatedField(source='global_components', slug_field='name', many=True,
+                                             queryset=GlobalComponent.objects.all())
     role = serializers.SlugRelatedField(source='contact_role', slug_field='name',
                                         read_only=False, queryset=ContactRole.objects.all())
     contact = ContactField()
+
+    def to_representation(self, instance):
+        representation = super(GlobalComponentContactSerializer, self).to_representation(instance)
+        components = representation['component']
+        if len(components) == 1:
+            representation['component'] = components[0]
+            return representation
+        result = []
+        for component in components:
+            result_item = deepcopy(representation)
+            result_item['component'] = component
+            result.append(result_item)
+        return result
 
     class Meta:
         model = RoleContact
@@ -551,41 +564,51 @@ class GlobalComponentContactSerializer(StrictSerializerMixin, serializers.ModelS
 
 
 class ReleaseComponentContactSerializer(StrictSerializerMixin, serializers.ModelSerializer):
-    component = serializers.SlugRelatedField(source='release_component', slug_field='name',
-                                             queryset=ReleaseComponent.objects.all())
-    release = serializers.SlugRelatedField(source='release_component.release', slug_field='release_id',
-                                           queryset=ReleaseComponent.objects.all())
+    component_id = serializers.SlugRelatedField(source='release_components', slug_field='id', many=True,
+                                                queryset=ReleaseComponent.objects.all())
     role = serializers.SlugRelatedField(source='contact_role', slug_field='name',
                                         read_only=False, queryset=ContactRole.objects.all())
     contact = ContactField()
-    component_id = serializers.SlugRelatedField(source='release_component', slug_field='id',
-                                                queryset=ReleaseComponent.objects.all())
 
     def __init__(self, *args, **kwargs):
         super(ReleaseComponentContactSerializer, self).__init__(*args, **kwargs)
-        self.inherited_role_contact_to_rc = self.context.get('view').inherited_role_contact_to_rc
+        self.gc_rc_id_mapping = self.context.get('view').gc_rc_id_mapping
 
     def to_representation(self, instance):
         representation = super(ReleaseComponentContactSerializer, self).to_representation(instance)
-        representation['from_global'] = False
-        # ReleaseComponent instance(s) list
-        release_components = self.inherited_role_contact_to_rc.get(instance)
         result = []
+        # for the release components' direct contact role is current one
+        representation['from_global'] = False
+        for rc in ReleaseComponent.objects.filter(id__in=representation['component_id']):
+            result_item = deepcopy(representation)
+            result_item['component_id'] = rc.id
+            result_item['component_name'] = rc.name
+            result.append(result_item)
 
-        if instance.release_component:
-            result.append(representation)
-        if release_components:
-            for rc in release_components:
-                result_item = deepcopy(representation)
-                result_item.update({'component': rc.name,
-                                    'component_id': rc.id,
-                                    'release': rc.release.release_id,
-                                    'from_global': True})
-                result.append(result_item)
-        if len(result) == 1:
-            return result[0]
+        # for the release components' don't have this role's contact, then inherit
+        # contact role from its global component.
+        representation['from_global'] = True
+        rc_id_list = set([])
+        for gc in instance.global_components.all():
+            rc_id_list.update(self.gc_rc_id_mapping.get(gc.id, set([])))
+
+        if rc_id_list:
+            from django.db import connection
+            cursor = connection.cursor()
+            cursor.execute("""SELECT rc.releasecomponent_id FROM component_releasecomponent_role_contacts AS rc JOIN
+            contact_rolecontact AS cr ON cr.id=rc.rolecontact_id WHERE rc.releasecomponent_id IN %(ids)s
+            AND cr.contact_role_id=%(contact_role_id)s""",
+                           {'ids': tuple(rc_id_list), 'contact_role_id': instance.contact_role.id})
+
+            inherited_rc_id_list = rc_id_list - set([row[0] for row in cursor])
+            if inherited_rc_id_list:
+                for rc in ReleaseComponent.objects.filter(id__in=inherited_rc_id_list):
+                    result_item = deepcopy(representation)
+                    result_item['component_id'] = rc.id
+                    result_item['component_name'] = rc.name
+                    result.append(result_item)
         return result
 
     class Meta:
         model = RoleContact
-        fields = ('component', 'component_id', 'release', 'id', 'role', 'contact')
+        fields = ('component_id', 'id', 'role', 'contact')

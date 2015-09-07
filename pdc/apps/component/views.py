@@ -70,6 +70,19 @@ class HackedComponentContactMixin(object):
                                   old_value, json.dumps(component.export()))
 
 
+class FlatResultMixin(object):
+    def flat(self, in_list):
+        # One contact role could be connected to multiple release components.
+        # Flat the result to return [r1, r2, r3] instead of [r1, [r2, r3]]
+        result = []
+        for item in in_list:
+            if isinstance(item, list):
+                result.extend(item)
+            else:
+                result.append(item)
+        return result
+
+
 class GlobalComponentViewSet(viewsets.PDCModelViewSet):
     """
     ##Overview##
@@ -1350,120 +1363,89 @@ class ReleaseComponentContactViewSet(HackedComponentContactMixin,
 
 class GlobalComponentContactInfoViewSet(viewsets.StrictQueryParamMixin,
                                         viewsets.ChangeSetUpdateModelMixin,
-                                        mixins.RetrieveModelMixin,
-                                        mixins.ListModelMixin,
+                                        FlatResultMixin,
                                         rest_framework.viewsets.GenericViewSet):
 
-    queryset = RoleContact.objects.filter(global_component__isnull=False)
+    queryset = RoleContact.objects.exclude(global_components=None).distinct()
     serializer_class = GlobalComponentContactSerializer
     filter_class = GlobalComponentContactFilter
+    model = RoleContact
 
     def list(self, request, *args, **kwargs):
-        return super(GlobalComponentContactInfoViewSet, self).list(request, *args, **kwargs)
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(self.flat(serializer.data))
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(self.flat(serializer.data))
 
     def retrieve(self, request, *args, **kwargs):
-        return super(GlobalComponentContactInfoViewSet, self).retrieve(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        try:
-            contact = RoleContact.objects.get(id=pk)
-        except RoleContact.DoesNotExist:
-            return Response(data={'detail': 'Specified TypedContact[%s] not found.' % pk},
-                            status=status.HTTP_404_NOT_FOUND)
-        if not contact.release_component:
-            contact.delete()
-        else:
-            contact.global_component = None
-            contact.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        instance = self.get_object()
+        serializer = self.get_serializer()
+        return Response(serializer.to_representation(instance))
 
     def update(self, request, *args, **kwargs):
-        return super(GlobalComponentContactInfoViewSet, self).update(request, *args, **kwargs)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.to_representation(instance))
+
+    def destroy(self, request, *args, **kwargs):
+        return super(GlobalComponentContactInfoViewSet, self).destroy(request, *args, **kwargs)
 
 
 class ReleaseComponentContactInfoViewSet(viewsets.StrictQueryParamMixin,
                                          viewsets.ChangeSetUpdateModelMixin,
                                          mixins.RetrieveModelMixin,
                                          mixins.ListModelMixin,
+                                         FlatResultMixin,
                                          rest_framework.viewsets.GenericViewSet):
 
     serializer_class = ReleaseComponentContactSerializer
     filter_class = ReleaseComponentContactFilter
-    inherited_role_contact_to_rc = None
+    gc_rc_id_mapping = None
+    queryset = (RoleContact.objects.exclude(global_components=None) |
+                RoleContact.objects.exclude(release_components=None)).distinct()
 
-    def get_queryset(self):
-        rc_qs_inherit_contact = ReleaseComponent.objects.select_related('global_component'). \
-            filter(role_contacts__isnull=True)
-        gc_list_for_inherited_rc = []
-        for rc in rc_qs_inherit_contact:
-            gc_list_for_inherited_rc.append(rc.global_component)
-        qs_inherit_contact = RoleContact.objects.select_related('contact_role', 'contact') \
-            .filter(global_component__in=gc_list_for_inherited_rc)
-        qs_contact_own = RoleContact.objects.select_related().filter(release_component__isnull=False)
-        return (qs_inherit_contact | qs_contact_own).distinct()
-
-    def _flat(self, in_list):
-        # One contact role could be connected to multiple release components.
-        # Flat the result to return [r1, r2, r3] instead of [r1, [r2, r3]]
-        result = []
-        for item in in_list:
-            if isinstance(item, list):
-                result.extend(item)
-            else:
-                result.append(item)
+    def _gc_rc_id_mapping(self):
+        result = {}
+        for rc in ReleaseComponent.objects.all().values('id', 'global_component_id'):
+            result.setdefault(rc['global_component_id'], set([])).add(rc['id'])
         return result
 
-    def _get_inherted_contact_to_rc_info(self):
-        rc_qs_inherit_contact = ReleaseComponent.objects.select_related('global_component').\
-            filter(role_contacts__isnull=True)
-        gc_to_rc = {}
-        gc_list_for_inherited_rc = []
-        role_contact_to_rc = {}
-        for rc in rc_qs_inherit_contact:
-            gc_to_rc.setdefault(rc.global_component.id, []).append(rc)
-            gc_list_for_inherited_rc.append(rc.global_component)
-
-        # Get role_contacts which will be used as inherited contact
-        for role_contact in RoleContact.objects.select_related('contact_role', 'contact')\
-                .filter(global_component__in=gc_list_for_inherited_rc):
-            role_contact_to_rc.setdefault(role_contact, []).extend(gc_to_rc[role_contact.global_component.id])
-
-        return role_contact_to_rc
-
     def list(self, request, *args, **kwargs):
-        self.inherited_role_contact_to_rc = self._get_inherted_contact_to_rc_info()
+        self.gc_rc_id_mapping = self._gc_rc_id_mapping()
         queryset = self.filter_queryset(self.get_queryset())
-
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(self._flat(serializer.data))
+            return self.get_paginated_response(self.flat(serializer.data))
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response(self._flat(serializer.data))
+        return Response(self.flat(serializer.data))
 
     def retrieve(self, request, *args, **kwargs):
-        self.inherited_role_contact_to_rc = self._get_inherted_contact_to_rc_info()
-        return super(ReleaseComponentContactInfoViewSet, self).retrieve(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        pk = self.kwargs.get('pk')
-        try:
-            contact = RoleContact.objects.get(id=pk)
-        except RoleContact.DoesNotExist:
-            return Response(data={'detail': 'Specified TypedContact[%s] not found.' % pk},
-                            status=status.HTTP_404_NOT_FOUND)
-        if not contact.global_component:
-            contact.delete()
-        else:
-            contact.release_component = None
-            contact.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        self.gc_rc_id_mapping = self._gc_rc_id_mapping()
+        instance = self.get_object()
+        serializer = self.get_serializer()
+        return Response(serializer.to_representation(instance))
 
     def update(self, request, *args, **kwargs):
-        self.inherited_role_contact_to_rc = self._get_inherted_contact_to_rc_info()
-        return super(ReleaseComponentContactInfoViewSet, self).update(request, *args, **kwargs)
+        self.gc_rc_id_mapping = self._gc_rc_id_mapping()
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.to_representation(instance))
+
+    def destroy(self, request, *args, **kwargs):
+        return super(ReleaseComponentContactInfoViewSet, self).destory(request, *args, **kwargs)
 
 
 class BugzillaComponentViewSet(viewsets.PDCModelViewSet):

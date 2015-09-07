@@ -82,8 +82,8 @@ class RoleContactFilter(FilterSet):
 
 
 class GlobalComponentContactFilter(RoleContactFilter):
-    component = MultiValueFilter(name='global_component__name')
-    role = MultiValueFilter(name='contact_roles__name')
+    component = MultiValueFilter(name='global_components__name')
+    role = MultiValueFilter(name='contact_role__name')
     contact_id = MultiValueFilter(name='contact')
 
     class Meta:
@@ -93,7 +93,7 @@ class GlobalComponentContactFilter(RoleContactFilter):
 
 class ReleaseComponentContactFilter(RoleContactFilter):
     component_id = MethodFilter(action='filter_by_component_id', widget=SelectMultiple)
-    role = MultiValueFilter(name='contact_roles__name')
+    role = MultiValueFilter(name='contact_role__name')
     contact_id = MultiValueFilter(name='contact')
 
     @value_is_not_empty
