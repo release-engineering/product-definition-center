@@ -173,7 +173,11 @@ class LabelRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
 
     def test_bulk_delete(self):
         response = self.client.delete(reverse('label-list'), [1, 2], format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, [{'url': 'http://testserver/rest_api/v1/labels/1/', 'name': u'label1',
+                                          'description': u'label1 description'},
+                                         {'url': 'http://testserver/rest_api/v1/labels/2/', 'name': u'label2',
+                                          'description': u'label2 description'}])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNumChanges([2])
         self.assertEqual(Label.objects.count(), 0)
 

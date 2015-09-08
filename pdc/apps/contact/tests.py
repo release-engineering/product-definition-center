@@ -751,7 +751,9 @@ class PersonBulkRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
 
     def test_destroy_successful(self):
         response = self.client.delete(reverse('person-list'), [self.eve, self.mal], format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, [{'username': u'Eve', 'id': 1, 'email': u'eve@example.com'},
+                                         {'username': u'Mal', 'id': 2, 'email': u'mal@example.com'}])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNumChanges([2])
         self.assertEqual(Person.objects.all().count(), 0)
 

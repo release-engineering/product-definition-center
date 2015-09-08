@@ -23,6 +23,8 @@ from rest_framework.settings import api_settings
 from rest_framework import routers, status
 from rest_framework.response import Response
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
 
 
 def _failure_response(ident, response, data=None):
@@ -92,12 +94,20 @@ def bulk_destroy_impl(self, request, **kwargs):
             return Response(status=status.HTTP_400_BAD_REQUEST,
                             data={'detail': '"%s" is not a valid identifier.' % ident})
     self.kwargs.update(kwargs)
+    result = []
     for ident in OrderedDict.fromkeys(request.data):
         self.kwargs[self.lookup_field] = unicode(ident)
+        try:
+            obj = self.get_object()
+            serializer = self.get_serializer(obj)
+            result.append(serializer.data)
+        except (Http404, ObjectDoesNotExist):
+            # Leave non-existence situation to be handled by their own destroy
+            pass
         response = _safe_run(self.destroy, request, **self.kwargs)
         if not status.is_success(response.status_code):
             return _failure_response(ident, response)
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    return Response(status=status.HTTP_200_OK, data=result)
 
 
 def bulk_update_impl(self, request, **kwargs):

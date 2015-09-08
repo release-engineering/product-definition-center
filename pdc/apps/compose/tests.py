@@ -795,7 +795,14 @@ class OverridesRPMAPITestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.delete(reverse('overridesrpm-list'),
                                       [1, override.pk],
                                       format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        expect_result = [{'comment': u'', 'rpm_arch': u'x86_64', 'variant': u'Server',
+                          'srpm_name': u'bash', 'do_not_delete': False, 'release': u'release-1.0',
+                          'include': False, 'arch': u'x86_64', 'id': 1, 'rpm_name': u'bash-doc'},
+                         {'comment': u'', 'rpm_arch': u'src', 'variant': u'Server', 'srpm_name': u'bash',
+                          'do_not_delete': True, 'release': u'release-1.0', 'include': True, 'arch': u'x86_64',
+                          'id': 2, 'rpm_name': u'bash-doc'}]
+        self.assertEqual(response.data, expect_result)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNumChanges([2])
         self.assertEqual(models.OverrideRPM.objects.count(), 0)
 

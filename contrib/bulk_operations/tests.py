@@ -78,7 +78,7 @@ class BulkOperationTestCase(unittest.TestCase):
         self.request.data = ['foo', 'bar', 'baz']
         self.viewset.destroy.return_value = Response(status=status.HTTP_204_NO_CONTENT)
         response = bulk.bulk_destroy_impl(self.viewset, self.request)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.viewset.destroy.assert_has_calls([mock.call(self.request, key='foo'),
                                                mock.call(self.request, key='bar'),
                                                mock.call(self.request, key='baz')])
@@ -123,7 +123,7 @@ class BulkOperationTestCase(unittest.TestCase):
         ]
         self.request.data = ['bar', 'foo', 'baz', 'foo']
         response = bulk.bulk_destroy_impl(self.viewset, self.request)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.viewset.destroy.assert_has_calls([mock.call(self.request, key='bar'),
                                                mock.call(self.request, key='foo'),
                                                mock.call(self.request, key='baz')])
