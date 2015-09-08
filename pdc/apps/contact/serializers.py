@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from pdc.apps.common.serializers import DynamicFieldsSerializerMixin, StrictSerializerMixin
+from pdc.apps.common.fields import ChoiceSlugField
 from .models import ContactRole, Person, Maillist, Contact, RoleContact
 
 
@@ -39,22 +40,6 @@ class MaillistSerializer(DynamicFieldsSerializerMixin,
     class Meta:
         model = Maillist
         fields = ('id', 'mail_name', 'email')
-
-
-class ContactRoleField(serializers.CharField):
-    def to_internal_value(self, data):
-        name = super(ContactRoleField, self).to_internal_value(data)
-        if name:
-            try:
-                contact_role = ContactRole.objects.get(name=name)
-            except ObjectDoesNotExist:
-                raise serializers.ValidationError('Could not find the contact role with name %s.' % name)
-            return contact_role
-        else:
-            return None
-
-    def to_representation(self, value):
-        return super(ContactRoleField, self).to_representation(value.name)
 
 
 class ContactField(serializers.DictField):
@@ -152,7 +137,7 @@ class UniqueRoleContactValidator(object):
 class RoleContactSerializer(DynamicFieldsSerializerMixin,
                             StrictSerializerMixin,
                             serializers.HyperlinkedModelSerializer):
-    contact_role = ContactRoleField()
+    contact_role = ChoiceSlugField(queryset=ContactRole.objects.all(), slug_field='name')
     contact = ContactField()
 
     class Meta:
