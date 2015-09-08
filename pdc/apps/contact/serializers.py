@@ -7,7 +7,6 @@ import json
 
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_lazy as _
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from pdc.apps.common.serializers import DynamicFieldsSerializerMixin, StrictSerializerMixin
