@@ -1719,7 +1719,9 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
     def test_bulk_delete_contacts(self):
         url = reverse('releasecomponentcontact-list', args=[1])
         response = self.client.delete(url, [5, 6, 7], format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(isinstance(response.data, list))
+        self.assertEqual(len(response.data), 3)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         c = models.ReleaseComponent.objects.get(pk=1)
         self.assertEqual(c.contacts.count(), 0)
 

@@ -1612,7 +1612,11 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.delete(reverse('variant-list'),
                                       ['release-1.0/Client-UID', 'release-1.0/Server-UID'],
                                       format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [{"release": "release-1.0", "id": "Client", "uid": "Client-UID",
+                                          "name": "Client name", "type": "optional", "arches": ["ia64", "x86_64"]},
+                                         {"release": "release-1.0", "id": "Server", "uid": "Server-UID",
+                                          "name": "Server name", "type": "variant", "arches": ["ppc64", "x86_64"]}])
         self.assertEqual(models.Variant.objects.count(), 0)
         self.assertNumChanges([2])
 

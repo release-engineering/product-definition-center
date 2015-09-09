@@ -311,10 +311,10 @@ class RepositoryMultipleFilterTestCase(APITestCase):
         self.assertEqual(response.data['count'], 2 * 27)
 
     def test_multiple_combination(self):
-        query = ('?service=pulp&service=ftp'
-                 + '&repo_family=beta&repo_family=htb'
-                 + '&content_format=rpm&content_format=iso'
-                 + '&content_category=debug&content_category=binary')
+        query = ('?service=pulp&service=ftp' +
+                 '&repo_family=beta&repo_family=htb' +
+                 '&content_format=rpm&content_format=iso' +
+                 '&content_category=debug&content_category=binary')
         response = self.client.get(reverse('repo-list') + query)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 16)
@@ -611,7 +611,9 @@ class RepoBulkTestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.delete(reverse('repo-list'),
                                       [r['id'] for r in response.data],
                                       format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data[0]['name'], args[0]['name'])
+        self.assertEqual(response.data[1]['service'], args[1]['service'])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(models.Repo.objects.count(), 0)
         self.assertNumChanges([2, 2])
 
