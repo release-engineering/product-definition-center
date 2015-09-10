@@ -219,6 +219,10 @@ EMPTY_PATCH_ERROR_RESPONSE = {
                       'correct URL but not forward the request body.'])
 }
 
+INTERNAL_SERVER_ERROR_RESPONSE = {
+    'detail': 'The server encountered an internal error or misconfiguration and was unable to complete your request.'
+}
+
 # Messaging Bus Config
 MESSAGE_BUS = {
     # MLP: Messaging Library Package
