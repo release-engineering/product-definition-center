@@ -2546,11 +2546,7 @@ class GlobalComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITest
         self.assertEqual(results[1]['contact']['mail_name'], 'maillist2')
 
     def test_retrieve_global_component_contacts(self):
-        url = reverse('globalcomponentcontacts-list')
-        response = self.client.get(url, format='json')
-        results = response.data.get('results')
-        id = results[1]['id']
-        url = reverse('globalcomponentcontacts-detail', kwargs={'pk': id})
+        url = reverse('globalcomponentcontacts-detail', kwargs={'pk': 2})
         response = self.client.get(url, format='json')
         result = response.data
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2562,9 +2558,7 @@ class GlobalComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITest
         url = reverse('globalcomponentcontacts-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.data.get('count'), 2)
-        results = response.data.get('results')
-        id = results[1]['id']
-        url = reverse('globalcomponentcontacts-detail', kwargs={'pk': id})
+        url = reverse('globalcomponentcontacts-detail', kwargs={'pk': 2})
         self.client.delete(url, format='json')
         url = reverse('globalcomponentcontacts-list')
         response = self.client.get(url, format='json')
@@ -2613,15 +2607,13 @@ class GlobalComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITest
         self.assertEqual(response.data.get('count'), 3)
 
     def test_patch_global_component_contacts(self):
-        url = reverse('globalcomponentcontacts-list')
-        results = self.client.get(url, format='json').data.get('results')
-        id = results[1]['id']
-        url = reverse('globalcomponentcontacts-detail', kwargs={'pk': id})
+        url = reverse('globalcomponentcontacts-detail', kwargs={'pk': 2})
         data = {"contact": {"username": "person2", "email": "person2@test.com"}}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response.data['contact'].pop('id')
         self.assertEqual(response.data['contact'], data['contact'])
+        self.assertNumChanges([1])
 
 
 class ReleaseComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
@@ -2661,11 +2653,7 @@ class ReleaseComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITes
         self.assertEqual(results[1]['contact']['mail_name'], 'maillist2')
 
     def test_retrieve_release_component_contacts(self):
-        url = reverse('releasecomponentcontacts-list')
-        response = self.client.get(url, format='json')
-        results = response.data.get('results')
-        id = results[1]['id']
-        url = reverse('releasecomponentcontacts-detail', kwargs={'pk': id})
+        url = reverse('releasecomponentcontacts-detail', kwargs={'pk': 2})
         response = self.client.get(url, format='json')
         result = response.data
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -2677,9 +2665,7 @@ class ReleaseComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITes
         url = reverse('releasecomponentcontacts-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.data.get('count'), 2)
-        results = response.data.get('results')
-        id = results[1]['id']
-        url = reverse('releasecomponentcontacts-detail', kwargs={'pk': id})
+        url = reverse('releasecomponentcontacts-detail', kwargs={'pk': 2})
         self.client.delete(url, format='json')
         url = reverse('releasecomponentcontacts-list')
         response = self.client.get(url, format='json')
@@ -2728,12 +2714,10 @@ class ReleaseComponentContactInfoRESTTestCase(TestCaseWithChangeSetMixin, APITes
         self.assertEqual(response.data.get('count'), 3)
 
     def test_patch_release_component_contacts(self):
-        url = reverse('releasecomponentcontacts-list')
-        results = self.client.get(url, format='json').data.get('results')
-        id = results[1]['id']
-        url = reverse('releasecomponentcontacts-detail', kwargs={'pk': id})
+        url = reverse('releasecomponentcontacts-detail', kwargs={'pk': 2})
         data = {"contact": {"username": "person2", "email": "person2@test.com"}}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response.data['contact'].pop('id')
         self.assertEqual(response.data['contact'], data['contact'])
+        self.assertNumChanges([1])

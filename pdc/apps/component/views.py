@@ -1862,7 +1862,6 @@ class GlobalComponentContactInfoViewSet(viewsets.PDCModelViewSet):
     queryset = GlobalComponentRoleContact.objects.all()
     serializer_class = GlobalComponentRoleContactSerializer
     filter_class = GlobalComponentRoleContactFilter
-    model = GlobalComponentRoleContact
 
     def list(self, request, *args, **kwargs):
         return super(GlobalComponentContactInfoViewSet, self).list(request, *args, **kwargs)
@@ -1882,7 +1881,6 @@ class ReleaseComponentContactInfoViewSet(viewsets.PDCModelViewSet):
     queryset = ReleaseComponentRoleContact.objects.all()
     serializer_class = ReleaseComponentRoleContactSerializer
     filter_class = ReleaseComponentRoleContactFilter
-    model = ReleaseComponentRoleContact
 
     def list(self, request, *args, **kwargs):
         return super(ReleaseComponentContactInfoViewSet, self).list(request, *args, **kwargs)

@@ -159,8 +159,6 @@ class GlobalComponentRoleContact(models.Model):
     component = models.ForeignKey('component.GlobalComponent', related_name='global_component_role_contacts',
                                   on_delete=models.PROTECT)
 
-    objects = models.Manager()
-
     def __unicode__(self):
         return u"%s: %s: %s" % (unicode(self.component), self.contact_role, unicode(self.contact))
 
@@ -185,7 +183,8 @@ class ReleaseComponentRoleContact(models.Model):
     component = models.ForeignKey('component.ReleaseComponent', related_name='release_component_role_contacts',
                                   on_delete=models.PROTECT)
 
-    objects = models.Manager()
+    def __unicode__(self):
+        return u"%s: %s: %s" % (unicode(self.component), self.contact_role, unicode(self.contact))
 
     class Meta:
         unique_together = (
