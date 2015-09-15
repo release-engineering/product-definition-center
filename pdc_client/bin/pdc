@@ -1,0 +1,321 @@
+#! /usr/bin/env python
+
+import json
+import sys
+import argparse
+import beanbag
+import requests
+import requests_kerberos
+import os
+import os.path
+import warnings
+import itertools
+import logging
+import imp
+import argcomplete
+
+
+PLUGIN_DIRS = [
+    os.path.join(os.path.dirname(__file__), '..', 'plugins')
+]
+
+GLOBAL_CONFIG_FILE = '/etc/pdc/client_config.json'
+USER_SPECIFIC_CONFIG_FILE = os.path.expanduser('~/.config/pdc/client_config.json')
+CONFIG_URL_KEY_NAME = 'host'
+CONFIG_INSECURE_KEY_NAME = 'insecure'
+CONFIG_DEVELOP_KEY_NAME = 'develop'
+CONFIG_TOKEN_KEY_NAME = 'token'
+
+
+def _read_file(file_path):
+    data = {}
+    if os.path.isfile(file_path):
+        with open(file_path, 'r') as config_file:
+            data = json.load(config_file)
+    return data
+
+
+def read_config_file(server_alias):
+    result = _read_file(GLOBAL_CONFIG_FILE).get(server_alias, {})
+    result.update(_read_file(USER_SPECIFIC_CONFIG_FILE).get(server_alias, {}))
+    return result
+
+
+class PDCClient(object):
+    def __init__(self, server):
+        if not server:
+            raise TypeError('Server must be specified')
+        session = requests.Session()
+        config = read_config_file(server)
+        url = server
+        develop = False
+        insecure = True
+        token = None
+
+        if config:
+            try:
+                url = config[CONFIG_URL_KEY_NAME]
+            except KeyError:
+                print "'%s' must be specified in configuration file." % CONFIG_URL_KEY_NAME
+                sys.exit(1)
+            insecure = config.get(CONFIG_INSECURE_KEY_NAME, insecure)
+            develop = config.get(CONFIG_DEVELOP_KEY_NAME, develop)
+            token = config.get(CONFIG_TOKEN_KEY_NAME, token)
+
+        if not develop:
+            # For local environment, we don't need to require a token,
+            # just access API directly.
+            # REQUIRED, OPTIONAL, DISABLED
+            session.auth = requests_kerberos.HTTPKerberosAuth(
+                mutual_authentication=requests_kerberos.DISABLED)
+
+        if insecure:
+            # turn off for servers with insecure certificates
+            session.verify = False
+            # turn off warnings about making insecure calls
+            if requests.__version__ < '2.4.0':
+                print "Requests version is too old, please upgrade to 2.4.0 or latest."
+                # disable all warnings, it had better to upgrade requests.
+                warnings.filterwarnings("ignore")
+            else:
+                requests.packages.urllib3.disable_warnings()
+
+        self.client = beanbag.BeanBag(url, session=session)
+
+        if not develop:
+            # For develop environment, we don't need to require a token
+            if not token:
+                token = self.obtain_token()
+            session.headers["Authorization"] = "Token %s" % token
+
+    def obtain_token(self):
+        """
+        Try to obtain token from all end-points that were ever used to serve the
+        token. If the request returns 404 NOT FOUND, retry with older version of
+        the URL.
+        """
+        token_end_points = ('token/obtain',
+                            'obtain-token',
+                            'obtain_token')
+        for end_point in token_end_points:
+            try:
+                return self.auth[end_point]._()['token']
+            except beanbag.BeanBagException, e:
+                if e.response.status_code != 404:
+                    raise
+        raise Exception('Could not obtain token from any known URL.')
+
+    def __call__(self, *args, **kwargs):
+        return self.client(*args, **kwargs)
+
+    def __getattr__(self, *args, **kwargs):
+        return self.client.__getattr__(*args, **kwargs)
+
+    def __getitem__(self, *args, **kwargs):
+        return self.client.__getitem__(*args, **kwargs)
+
+
+def get_paged(res, **kwargs):
+    def worker():
+        kwargs['page'] = 1
+        while True:
+            response = res(**kwargs)
+            yield response['results']
+            if response['next']:
+                kwargs['page'] += 1
+            else:
+                break
+    return itertools.chain.from_iterable(worker())
+
+
+class Runner(object):
+    def __init__(self):
+        self.plugins = []
+        self.logger = logging.getLogger('pdc')
+
+    def load_plugins(self):
+        for dir in PLUGIN_DIRS:
+            self.logger.debug('Loading plugins from {}'.format(dir))
+            for name in os.listdir(dir):
+                if not name.endswith('.py'):
+                    continue
+                file, pathname, description = imp.find_module(name[:-3], [dir])
+                plugin = imp.load_module(name[:-3], file, pathname, description)
+                self.logger.debug('Loaded plugin {}'.format(name[:-3]))
+                self.plugins.append(plugin)
+
+    def run_hook(self, hook, *args, **kwargs):
+        for plugin in self.plugins:
+            if hasattr(plugin, hook):
+                self.logger.debug('Calling hook {} in plugin {}'.format(hook, plugin.__name__))
+                getattr(plugin, hook)(*args, **kwargs)
+
+    def setup(self):
+        self.load_plugins()
+
+        self.parser = argparse.ArgumentParser(description='PDC Client')
+        self.parser.add_argument('-s', '--server', default='stage')
+        self.parser.add_argument('--debug', action='store_true', help=argparse.SUPPRESS)
+        self.parser.add_argument('--json', action='store_true',
+                                 help='display output as JSON')
+
+        subparsers = self.parser.add_subparsers(metavar='COMMAND')
+
+        subcmd = subparsers.add_parser('release-list', help='list all releases')
+        subcmd.add_argument('--inactive', action='store_true',
+                            help='show only inactive releases')
+        subcmd.add_argument('--all', action='store_true',
+                            help='show both active and inactive releases')
+        subcmd.set_defaults(func=self.list_releases)
+
+        subcmd = subparsers.add_parser('release-info', help='display details of a release')
+        subcmd.add_argument('release_id', metavar='RELEASE_ID')
+        subcmd.set_defaults(func=self.release_info)
+
+        subcmd = subparsers.add_parser('release-update')
+        subcmd.add_argument('release_id', metavar='RELEASE_ID')
+        self.add_release_arguments(subcmd)
+        subcmd.set_defaults(func=self.release_update)
+
+        subcmd = subparsers.add_parser('release-create')
+        self.add_release_arguments(subcmd)
+        subcmd.set_defaults(func=self.release_create)
+
+        argcomplete.autocomplete(self.parser)
+
+    def add_release_arguments(self, parser):
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--activate', action='store_const', const=True, dest='active')
+        group.add_argument('--deactivate', action='store_const', const=False, dest='active')
+        parser.add_argument('--version')
+        parser.add_argument('--short')
+        parser.add_argument('--release-type')
+        parser.add_argument('--product-version')
+        parser.add_argument('--name')
+        parser.add_argument('--integrated-with')
+        parser.add_argument('--base-product')
+        parser.add_argument('--bugzilla-product')
+        parser.add_argument('--dist-git-branch')
+
+        self.run_hook('release_parser_setup', parser)
+
+    def run(self):
+        self.args = self.parser.parse_args()
+        self.client = PDCClient(self.args.server)
+        try:
+            self.args.func()
+        except beanbag.BeanBagException as exc:
+            print exc
+            try:
+                print exc.response.json()
+            except ValueError:
+                pass
+
+    def list_releases(self):
+        filters = {}
+        if self.args.inactive:
+            filters['active'] = False
+        elif not self.args.all:
+            filters['active'] = True
+
+        releases = get_paged(self.client.releases._, **filters)
+        if self.args.json:
+            print json.dumps(list(releases))
+            return
+
+        fmt = '{:25} {:35} {}'
+        for release in releases:
+            print fmt.format(release['release_id'], release['name'],
+                             'active' if release['active'] else 'inactive')
+
+    def release_info(self, release_id=None):
+        release_id = release_id or self.args.release_id
+        release = self.client.releases[release_id]._()
+        variants = get_paged(self.client['release-variants']._, release=release_id)
+        if self.args.json:
+            release['variants'] = list(variants)
+            print json.dumps(release)
+            return
+
+        fmt = '{:20} {}'
+        print fmt.format('Release ID', release['release_id'])
+        print fmt.format('Name', release['name'])
+        print fmt.format('Short Name', release['short'])
+        print fmt.format('Version', release['version'])
+        print fmt.format('Type', release['release_type'])
+        print fmt.format('Product Version', release['product_version'] or '')
+        print fmt.format('Base Product', release['base_product'] or '')
+        print fmt.format('Activity', 'active' if release['active'] else 'inactive')
+        print fmt.format('Integrated With', release['integrated_with'] or '')
+
+        # Call plugins
+        self.run_hook('release_info', release)
+
+        if release['bugzilla']:
+            print '\nBugzilla'
+            print fmt.format('Product', release['bugzilla']['product'])
+
+        if release['dist_git']:
+            print '\nDist Git'
+            print fmt.format('Branch', release['dist_git']['branch'])
+
+        print '\nVariants'
+        fmt = '{:25} {:20} {:20} {:15} {}'
+        print fmt.format('UID', 'ID', 'Name', 'Type', 'Arches')
+        for variant in variants:
+            print fmt.format(variant['uid'], variant['id'], variant['name'],
+                             variant['type'], ', '.join(variant['arches']))
+
+    def release_update(self):
+        data = self.get_release_data()
+
+        if data:
+            self.logger.debug('Updating release {} with data {}'.format(self.args.release_id, data))
+            self.client.releases[self.args.release_id]._ += data
+        else:
+            self.logger.info('No change required, not making a request')
+
+        self.release_info()
+
+    def release_create(self):
+        data = self.get_release_data()
+        self.logger.debug('Creating release with data {}'.format(data))
+        response = self.client.releases._(data)
+        self.release_info(response['release_id'])
+
+    def get_release_data(self):
+        data = {}
+        if self.args.active is not None:
+            data['active'] = self.args.active
+        if self.args.version:
+            data['version'] = self.args.version
+        if self.args.short:
+            data['short'] = self.args.short
+        if self.args.release_type:
+            data['release_type'] = self.args.release_type
+        if self.args.product_version is not None:
+            data['product_version'] = self.args.product_version or None
+        if self.args.name:
+            data['name'] = self.args.name
+        if self.args.integrated_with is not None:
+            data['integrated_with'] = self.args.integrated_with or None
+        if self.args.base_product is not None:
+            data['base_product'] = self.args.base_product or None
+        if self.args.bugzilla_product is not None:
+            data['bugzilla'] = {'product': self.args.bugzilla_product} if self.args.bugzilla_product else None
+        if self.args.dist_git_branch is not None:
+            data['dist_git'] = {'branch': self.args.dist_git_branch} if self.args.dist_git_branch else None
+
+        self.run_hook('release_update_prepare', self.args, data)
+
+        return data
+
+
+if __name__ == '__main__':
+    # This is a bit of a hack - we need to set the debug mode before the
+    # arguments are parsed, since parsing arguments depends on plugins, and
+    # loading plugins may log debug messages.
+    logging.basicConfig(level=logging.DEBUG if '--debug' in sys.argv else logging.WARNING)
+    runner = Runner()
+    runner.setup()
+    runner.run()
