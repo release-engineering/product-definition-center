@@ -431,7 +431,7 @@ class ReleaseComponentSerializer(DynamicFieldsSerializerMixin,
                   'contacts', 'type')
         validators = [UniqueTogetherValidator(
             queryset=ReleaseComponent.objects.all(),
-            fields=('name', 'release', 'global_component')
+            fields=('name', 'release')
         )]
 
 
