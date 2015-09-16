@@ -1,12 +1,16 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2015 Red Hat
+# Licensed under The MIT License (MIT)
+# http://opensource.org/licenses/MIT
+#
 
-import json
 import sys
 import argparse
 import beanbag
 import os
 import os.path
-import itertools
 import logging
 import imp
 import argcomplete
@@ -20,30 +24,10 @@ PLUGIN_DIRS = [
     os.path.join(os.path.dirname(__file__), '..', 'plugins')
 ]
 
-DATA_PREFIX = 'data__'
-
-
-def get_paged(res, **kwargs):
-    """
-    This call is equivalent to `res(**kwargs)`, only it retrieves all pages and
-    returns the results joined into a single iterable. The advantage over
-    retrieving everything at once is that the result can be consumed
-    immediately.
-    """
-    def worker():
-        kwargs['page'] = 1
-        while True:
-            response = res(**kwargs)
-            yield response['results']
-            if response['next']:
-                kwargs['page'] += 1
-            else:
-                break
-    return itertools.chain.from_iterable(worker())
-
 
 class Runner(object):
     def __init__(self):
+        self.raw_plugins = []
         self.plugins = []
         self.logger = logging.getLogger('pdc')
 
@@ -56,7 +40,11 @@ class Runner(object):
                 file, pathname, description = imp.find_module(name[:-3], [dir])
                 plugin = imp.load_module(name[:-3], file, pathname, description)
                 self.logger.debug('Loaded plugin {}'.format(name[:-3]))
-                self.plugins.append(plugin)
+                self.raw_plugins.append(plugin)
+                if hasattr(plugin, 'PLUGIN_CLASSES'):
+                    for p in plugin.PLUGIN_CLASSES:
+                        self.logger.debug('Instantiating {}'.format(p.__name__))
+                        self.plugins.append(p(self))
 
     def run_hook(self, hook, *args, **kwargs):
         """
@@ -64,7 +52,7 @@ class Runner(object):
         `kwargs` in each of them. If the plugin does not have the function, it
         is skipped.
         """
-        for plugin in self.plugins:
+        for plugin in self.raw_plugins:
             if hasattr(plugin, hook):
                 self.logger.debug('Calling hook {} in plugin {}'.format(hook, plugin.__name__))
                 getattr(plugin, hook)(*args, **kwargs)
@@ -80,125 +68,16 @@ class Runner(object):
 
         subparsers = self.parser.add_subparsers(metavar='COMMAND')
 
-        subcmd = subparsers.add_parser('release-list', help='list all releases')
-        subcmd.add_argument('--inactive', action='store_true',
-                            help='show only inactive releases')
-        subcmd.add_argument('--all', action='store_true',
-                            help='show both active and inactive releases')
-        subcmd.set_defaults(func=self.list_releases)
-
-        subcmd = subparsers.add_parser('release-info', help='display details of a release')
-        subcmd.add_argument('release_id', metavar='RELEASE_ID')
-        subcmd.set_defaults(func=self.release_info)
-
-        subcmd = subparsers.add_parser('release-update')
-        subcmd.add_argument('release_id', metavar='RELEASE_ID')
-        self.add_release_arguments(subcmd)
-        subcmd.set_defaults(func=self.release_update)
-
-        subcmd = subparsers.add_parser('release-create')
-        self.add_release_arguments(subcmd)
-        subcmd.set_defaults(func=self.release_create)
-
-        subcmd = subparsers.add_parser('rpm-list', help='list all rpms')
-        filters = ('name version release arch compose conflicts obsoletes provides '
-                   'suggests recommends requires'.split())
-        for arg in filters:
-            subcmd.add_argument('--' + arg, dest='filter_' + arg)
-        subcmd.set_defaults(func=self.rpm_list)
-
-        subcmd = subparsers.add_parser('rpm-info', help='display details of an RPM')
-        subcmd.add_argument('rpmid', metavar='ID')
-        subcmd.set_defaults(func=self.rpm_info)
-
-        subcmd = subparsers.add_parser('rpm-create')
-        self.add_rpm_arguments(subcmd)
-        subcmd.set_defaults(func=self.rpm_create)
-
-        subcmd = subparsers.add_parser('rpm-update')
-        subcmd.add_argument('rpmid', metavar='ID')
-        self.add_rpm_arguments(subcmd)
-        subcmd.set_defaults(func=self.rpm_update)
+        for plugin in self.plugins:
+            plugin.register(subparsers)
 
         argcomplete.autocomplete(self.parser)
-
-    def add_release_arguments(self, parser):
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument('--activate', action='store_const', const=True, dest='active')
-        group.add_argument('--deactivate', action='store_const', const=False, dest='active')
-        self.add_parser_arguments(parser, {
-            'version': {},
-            'short': {},
-            'release_type': {},
-            'product_version': {},
-            'name': {},
-            'base_product': {},
-            'bugzilla__product': {'arg': 'bugzilla-product'},
-            'dist_git__branch': {'arg': 'dist-git-branch'}})
-
-        self.run_hook('release_parser_setup', parser)
-
-    def add_rpm_arguments(self, parser):
-        self.add_parser_arguments(parser, {
-            'arch': {},
-            'epoch': {'type': int},
-            'filename': {},
-            'name': {},
-            'release': {},
-            'srpm_name': {},
-            'srpm_nevra': {},
-            'version': {},
-            'linked_releases': {'nargs': '*', 'metavar': 'RELEASE_ID'}})
-        self.add_parser_arguments(parser, {
-            'dependencies__requires': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'requires'},
-            'dependencies__provides': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'provides'},
-            'dependencies__suggests': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'suggests'},
-            'dependencies__obsoletes': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'obsoletes'},
-            'dependencies__recommends': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'recommends'},
-            'dependencies__conflicts': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'conflicts'}},
-            group='Dependencies (optional)')
-
-    def add_parser_arguments(self, parser, args, group=None, prefix=DATA_PREFIX):
-        """
-        Helper method that populates parser arguments. The argument values can
-        be later retrieved with `extract_arguments` method.
-
-        The `args` argument to this method should be a dict with strings as
-        keys and dicts as values. The keys will be used as keys in returned
-        data. Their values will be passed as kwargs to `parser.add_argument`.
-        There is special value `arg` that will be used as argument name if
-        present, otherwise a name will be generated based on the key.
-
-        If `group` is a string, it will be used as group header in help output.
-        """
-        if group:
-            parser = parser.add_argument_group(group)
-        for arg, kwargs in args.iteritems():
-            arg_name = kwargs.pop('arg', arg.replace('_', '-'))
-            if 'metavar' not in kwargs:
-                kwargs['metavar'] = arg.upper()
-            parser.add_argument('--' + arg_name, dest=prefix + arg, **kwargs)
-
-    def extract_arguments(self, prefix=DATA_PREFIX):
-        """
-        Return a dict of arguments created by `add_parser_arguments`.
-        """
-        data = {}
-        for key, value in self.args.__dict__.iteritems():
-            if key.startswith(prefix) and value is not None:
-                parts = key[len(prefix):].split('__')
-                d = data
-                for p in parts[:-1]:
-                    d[p] = {}
-                    d = d[p]
-                d[parts[-1]] = value if value != '' else None
-        return data
 
     def run(self):
         self.args = self.parser.parse_args()
         self.client = pdc_client.PDCClient(self.args.server)
         try:
-            self.args.func()
+            self.args.func(self.args)
         except beanbag.BeanBagException as exc:
             self.print_error_header(exc)
             try:
@@ -228,150 +107,6 @@ class Runner(object):
                 print '{}:'.format(key)
                 for error in value:
                     print ' * {}'.format(error)
-
-    def list_releases(self):
-        filters = {}
-        if self.args.inactive:
-            filters['active'] = False
-        elif not self.args.all:
-            filters['active'] = True
-
-        releases = get_paged(self.client.releases._, **filters)
-        if self.args.json:
-            print json.dumps(list(releases))
-            return
-
-        fmt = '{:25} {:35} {}'
-        for release in releases:
-            print fmt.format(release['release_id'], release['name'],
-                             'active' if release['active'] else 'inactive')
-
-    def release_info(self, release_id=None):
-        release_id = release_id or self.args.release_id
-        release = self.client.releases[release_id]._()
-        variants = get_paged(self.client['release-variants']._, release=release_id)
-        if self.args.json:
-            release['variants'] = list(variants)
-            print json.dumps(release)
-            return
-
-        fmt = '{:20} {}'
-        print fmt.format('Release ID', release['release_id'])
-        print fmt.format('Name', release['name'])
-        print fmt.format('Short Name', release['short'])
-        print fmt.format('Version', release['version'])
-        print fmt.format('Type', release['release_type'])
-        print fmt.format('Product Version', release['product_version'] or '')
-        print fmt.format('Base Product', release['base_product'] or '')
-        print fmt.format('Activity', 'active' if release['active'] else 'inactive')
-        print fmt.format('Integrated With', release['integrated_with'] or '')
-
-        # Call plugins
-        self.run_hook('release_info', release)
-
-        if release['bugzilla']:
-            print '\nBugzilla'
-            print fmt.format('Product', release['bugzilla']['product'])
-
-        if release['dist_git']:
-            print '\nDist Git'
-            print fmt.format('Branch', release['dist_git']['branch'])
-
-        print '\nVariants'
-        fmt = '{:25} {:20} {:20} {:15} {}'
-        print fmt.format('UID', 'ID', 'Name', 'Type', 'Arches')
-        for variant in variants:
-            print fmt.format(variant['uid'], variant['id'], variant['name'],
-                             variant['type'], ', '.join(variant['arches']))
-
-    def release_update(self):
-        data = self.get_release_data()
-
-        if data:
-            self.logger.debug('Updating release {} with data {}'.format(self.args.release_id, data))
-            self.client.releases[self.args.release_id]._ += data
-        else:
-            self.logger.info('No change required, not making a request')
-
-        self.release_info()
-
-    def release_create(self):
-        data = self.get_release_data()
-        self.logger.debug('Creating release with data {}'.format(data))
-        response = self.client.releases._(data)
-        self.release_info(response['release_id'])
-
-    def get_release_data(self):
-        data = self.extract_arguments()
-        if self.args.active is not None:
-            data['active'] = self.args.active
-
-        self.run_hook('release_update_prepare', self.args, data)
-
-        return data
-
-    def rpm_list(self):
-        filters = self.extract_arguments(prefix='filter_')
-        if not filters:
-            sys.stderr.write('At least some filter must be used.\n')
-            sys.exit(1)
-        rpms = get_paged(self.client.rpms._, **filters)
-        if self.args.json:
-            print json.dumps(list(rpms))
-            return
-
-        for rpm in rpms:
-            print '{id:10} {name:45} {epoch}:{version}-{release}.{arch}'.format(**rpm)
-
-    def rpm_info(self, rpm_id=None):
-        response = self.client.rpms[rpm_id or self.args.rpmid]._()
-        if self.args.json:
-            print json.dumps(response)
-            return
-        fmt = '{:20} {}'
-        print fmt.format('ID', response['id'])
-        print fmt.format('Name', response['name'])
-        print fmt.format('Epoch', response['epoch'])
-        print fmt.format('Version', response['version'])
-        print fmt.format('Release', response['release'])
-        print fmt.format('Arch', response['arch'])
-        print fmt.format('SRPM Name', response['srpm_name'])
-        print fmt.format('SRPM NEVRA', response['srpm_nevra'] or '')
-        print fmt.format('Filename', response['filename'])
-
-        if response['linked_composes']:
-            print '\nIncluded in composes:'
-            for compose in sorted(response['linked_composes']):
-                print compose
-
-        if response['linked_releases']:
-            print '\nLinked to releases:'
-            for release in sorted(response['linked_releases']):
-                print release
-
-        for type in ('recommends', 'suggests', 'obsoletes', 'provides', 'conflicts', 'requires'):
-            if response['dependencies'][type]:
-                print '\n{}:'.format(type.capitalize())
-                for dep in response['dependencies'][type]:
-                    print dep
-
-    def rpm_create(self):
-        data = {}
-        for key, value in self.args.__dict__.iteritems():
-            if key.startswith('data_') and value is not None:
-                data[key[5:]] = value if value != '' else None
-        self.logger.debug('Creating rpm with data %r', data)
-        response = self.client.rpms._(data)
-        self.rpm_info(response['id'])
-
-    def rpm_update(self):
-        data = self.extract_arguments()
-        if data:
-            self.logger.debug('Updating rpm %s with data %r', self.args.rpmid, data)
-            self.client.rpms[self.args.rpmid]._ += data
-        else:
-            self.logger.debug('Empty data, skipping request')
-        self.rpm_info(self.args.rpmid)
 
 
 if __name__ == '__main__':
