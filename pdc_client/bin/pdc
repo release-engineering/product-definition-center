@@ -20,6 +20,8 @@ PLUGIN_DIRS = [
     os.path.join(os.path.dirname(__file__), '..', 'plugins')
 ]
 
+DATA_PREFIX = 'data__'
+
 
 def get_paged(res, **kwargs):
     """
@@ -98,23 +100,99 @@ class Runner(object):
         self.add_release_arguments(subcmd)
         subcmd.set_defaults(func=self.release_create)
 
+        subcmd = subparsers.add_parser('rpm-list', help='list all rpms')
+        filters = ('name version release arch compose conflicts obsoletes provides '
+                   'suggests recommends requires'.split())
+        for arg in filters:
+            subcmd.add_argument('--' + arg, dest='filter_' + arg)
+        subcmd.set_defaults(func=self.rpm_list)
+
+        subcmd = subparsers.add_parser('rpm-info', help='display details of an RPM')
+        subcmd.add_argument('rpmid', metavar='ID')
+        subcmd.set_defaults(func=self.rpm_info)
+
+        subcmd = subparsers.add_parser('rpm-create')
+        self.add_rpm_arguments(subcmd)
+        subcmd.set_defaults(func=self.rpm_create)
+
+        subcmd = subparsers.add_parser('rpm-update')
+        subcmd.add_argument('rpmid', metavar='ID')
+        self.add_rpm_arguments(subcmd)
+        subcmd.set_defaults(func=self.rpm_update)
+
         argcomplete.autocomplete(self.parser)
 
     def add_release_arguments(self, parser):
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--activate', action='store_const', const=True, dest='active')
         group.add_argument('--deactivate', action='store_const', const=False, dest='active')
-        parser.add_argument('--version')
-        parser.add_argument('--short')
-        parser.add_argument('--release-type')
-        parser.add_argument('--product-version')
-        parser.add_argument('--name')
-        parser.add_argument('--integrated-with')
-        parser.add_argument('--base-product')
-        parser.add_argument('--bugzilla-product')
-        parser.add_argument('--dist-git-branch')
+        self.add_parser_arguments(parser, {
+            'version': {},
+            'short': {},
+            'release_type': {},
+            'product_version': {},
+            'name': {},
+            'base_product': {},
+            'bugzilla__product': {'arg': 'bugzilla-product'},
+            'dist_git__branch': {'arg': 'dist-git-branch'}})
 
         self.run_hook('release_parser_setup', parser)
+
+    def add_rpm_arguments(self, parser):
+        self.add_parser_arguments(parser, {
+            'arch': {},
+            'epoch': {'type': int},
+            'filename': {},
+            'name': {},
+            'release': {},
+            'srpm_name': {},
+            'srpm_nevra': {},
+            'version': {},
+            'linked_releases': {'nargs': '*', 'metavar': 'RELEASE_ID'}})
+        self.add_parser_arguments(parser, {
+            'dependencies__requires': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'requires'},
+            'dependencies__provides': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'provides'},
+            'dependencies__suggests': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'suggests'},
+            'dependencies__obsoletes': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'obsoletes'},
+            'dependencies__recommends': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'recommends'},
+            'dependencies__conflicts': {'nargs': '*', 'metavar': 'DEPENDENCY', 'arg': 'conflicts'}},
+            group='Dependencies (optional)')
+
+    def add_parser_arguments(self, parser, args, group=None, prefix=DATA_PREFIX):
+        """
+        Helper method that populates parser arguments. The argument values can
+        be later retrieved with `extract_arguments` method.
+
+        The `args` argument to this method should be a dict with strings as
+        keys and dicts as values. The keys will be used as keys in returned
+        data. Their values will be passed as kwargs to `parser.add_argument`.
+        There is special value `arg` that will be used as argument name if
+        present, otherwise a name will be generated based on the key.
+
+        If `group` is a string, it will be used as group header in help output.
+        """
+        if group:
+            parser = parser.add_argument_group(group)
+        for arg, kwargs in args.iteritems():
+            arg_name = kwargs.pop('arg', arg.replace('_', '-'))
+            if 'metavar' not in kwargs:
+                kwargs['metavar'] = arg.upper()
+            parser.add_argument('--' + arg_name, dest=prefix + arg, **kwargs)
+
+    def extract_arguments(self, prefix=DATA_PREFIX):
+        """
+        Return a dict of arguments created by `add_parser_arguments`.
+        """
+        data = {}
+        for key, value in self.args.__dict__.iteritems():
+            if key.startswith(prefix) and value is not None:
+                parts = key[len(prefix):].split('__')
+                d = data
+                for p in parts[:-1]:
+                    d[p] = {}
+                    d = d[p]
+                d[parts[-1]] = value if value != '' else None
+        return data
 
     def run(self):
         self.args = self.parser.parse_args()
@@ -122,11 +200,34 @@ class Runner(object):
         try:
             self.args.func()
         except beanbag.BeanBagException as exc:
-            print exc
+            self.print_error_header(exc)
             try:
-                print exc.response.json()
+                self.print_error_details(exc.response.json())
             except ValueError:
                 pass
+            sys.exit(1)
+
+    def print_error_header(self, exc):
+        if exc.response.status_code > 500:
+            print 'Internal server error. Please consider reporting a bug.'
+        else:
+            headers = {
+                400: 'bad request data',
+                401: 'unauthorized',
+                404: 'not found',
+                409: 'conflict',
+            }
+            print 'Client error: {}.'.format(headers.get(exc.response.status_code, 'unknown'))
+
+    def print_error_details(self, body):
+        self.logger.debug(body)
+        for key, value in body.iteritems():
+            if isinstance(value, basestring):
+                print '{}: {}'.format(key, value)
+            else:
+                print '{}:'.format(key)
+                for error in value:
+                    print ' * {}'.format(error)
 
     def list_releases(self):
         filters = {}
@@ -201,31 +302,76 @@ class Runner(object):
         self.release_info(response['release_id'])
 
     def get_release_data(self):
-        data = {}
+        data = self.extract_arguments()
         if self.args.active is not None:
             data['active'] = self.args.active
-        if self.args.version:
-            data['version'] = self.args.version
-        if self.args.short:
-            data['short'] = self.args.short
-        if self.args.release_type:
-            data['release_type'] = self.args.release_type
-        if self.args.product_version is not None:
-            data['product_version'] = self.args.product_version or None
-        if self.args.name:
-            data['name'] = self.args.name
-        if self.args.integrated_with is not None:
-            data['integrated_with'] = self.args.integrated_with or None
-        if self.args.base_product is not None:
-            data['base_product'] = self.args.base_product or None
-        if self.args.bugzilla_product is not None:
-            data['bugzilla'] = {'product': self.args.bugzilla_product} if self.args.bugzilla_product else None
-        if self.args.dist_git_branch is not None:
-            data['dist_git'] = {'branch': self.args.dist_git_branch} if self.args.dist_git_branch else None
 
         self.run_hook('release_update_prepare', self.args, data)
 
         return data
+
+    def rpm_list(self):
+        filters = self.extract_arguments(prefix='filter_')
+        if not filters:
+            sys.stderr.write('At least some filter must be used.\n')
+            sys.exit(1)
+        rpms = get_paged(self.client.rpms._, **filters)
+        if self.args.json:
+            print json.dumps(list(rpms))
+            return
+
+        for rpm in rpms:
+            print '{id:10} {name:45} {epoch}:{version}-{release}.{arch}'.format(**rpm)
+
+    def rpm_info(self, rpm_id=None):
+        response = self.client.rpms[rpm_id or self.args.rpmid]._()
+        if self.args.json:
+            print json.dumps(response)
+            return
+        fmt = '{:20} {}'
+        print fmt.format('ID', response['id'])
+        print fmt.format('Name', response['name'])
+        print fmt.format('Epoch', response['epoch'])
+        print fmt.format('Version', response['version'])
+        print fmt.format('Release', response['release'])
+        print fmt.format('Arch', response['arch'])
+        print fmt.format('SRPM Name', response['srpm_name'])
+        print fmt.format('SRPM NEVRA', response['srpm_nevra'] or '')
+        print fmt.format('Filename', response['filename'])
+
+        if response['linked_composes']:
+            print '\nIncluded in composes:'
+            for compose in sorted(response['linked_composes']):
+                print compose
+
+        if response['linked_releases']:
+            print '\nLinked to releases:'
+            for release in sorted(response['linked_releases']):
+                print release
+
+        for type in ('recommends', 'suggests', 'obsoletes', 'provides', 'conflicts', 'requires'):
+            if response['dependencies'][type]:
+                print '\n{}:'.format(type.capitalize())
+                for dep in response['dependencies'][type]:
+                    print dep
+
+    def rpm_create(self):
+        data = {}
+        for key, value in self.args.__dict__.iteritems():
+            if key.startswith('data_') and value is not None:
+                data[key[5:]] = value if value != '' else None
+        self.logger.debug('Creating rpm with data %r', data)
+        response = self.client.rpms._(data)
+        self.rpm_info(response['id'])
+
+    def rpm_update(self):
+        data = self.extract_arguments()
+        if data:
+            self.logger.debug('Updating rpm %s with data %r', self.args.rpmid, data)
+            self.client.rpms[self.args.rpmid]._ += data
+        else:
+            self.logger.debug('Empty data, skipping request')
+        self.rpm_info(self.args.rpmid)
 
 
 if __name__ == '__main__':
