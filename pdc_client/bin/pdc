@@ -14,12 +14,20 @@ import argcomplete
 import pdc_client
 
 
+# A list of paths to directories where plugins should be loaded from.
+# The purpose of the plugins is to extend the default behaviour.
 PLUGIN_DIRS = [
     os.path.join(os.path.dirname(__file__), '..', 'plugins')
 ]
 
 
 def get_paged(res, **kwargs):
+    """
+    This call is equivalent to `res(**kwargs)`, only it retrieves all pages and
+    returns the results joined into a single iterable. The advantage over
+    retrieving everything at once is that the result can be consumed
+    immediately.
+    """
     def worker():
         kwargs['page'] = 1
         while True:
@@ -49,6 +57,11 @@ class Runner(object):
                 self.plugins.append(plugin)
 
     def run_hook(self, hook, *args, **kwargs):
+        """
+        Loop over all plugins and invoke function `hook` with `args` and
+        `kwargs` in each of them. If the plugin does not have the function, it
+        is skipped.
+        """
         for plugin in self.plugins:
             if hasattr(plugin, hook):
                 self.logger.debug('Calling hook {} in plugin {}'.format(hook, plugin.__name__))
