@@ -61,7 +61,10 @@ class Runner(object):
         self.load_plugins()
 
         self.parser = argparse.ArgumentParser(description='PDC Client')
-        self.parser.add_argument('-s', '--server', default='stage')
+        self.parser.add_argument('--help-all', action='help',
+                                 help='show help including all commands')
+        self.parser.add_argument('-s', '--server', default='stage',
+                                 help='API URL or shortcut from config file')
         self.parser.add_argument('--debug', action='store_true', help=argparse.SUPPRESS)
         self.parser.add_argument('--json', action='store_true',
                                  help='display output as JSON')
@@ -69,7 +72,8 @@ class Runner(object):
         subparsers = self.parser.add_subparsers(metavar='COMMAND')
 
         for plugin in self.plugins:
-            plugin.register(subparsers)
+            plugin._before_register(subparsers)
+            plugin.register()
 
         argcomplete.autocomplete(self.parser)
 

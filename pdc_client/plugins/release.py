@@ -10,24 +10,26 @@ from pdc_client.plugins import PDCClientPlugin, get_paged, add_parser_arguments,
 
 
 class ReleasePlugin(PDCClientPlugin):
-    def register(self, parsers):
-        subcmd = parsers.add_parser('release-list', help='list all releases')
+    def register(self):
+        subcmd = self.add_command('release-list', help='list all releases')
         subcmd.add_argument('--inactive', action='store_true',
                             help='show only inactive releases')
         subcmd.add_argument('--all', action='store_true',
                             help='show both active and inactive releases')
         subcmd.set_defaults(func=self.list_releases)
 
-        subcmd = parsers.add_parser('release-info', help='display details of a release')
+        subcmd = self.add_command('release-info', help='display details of a release')
         subcmd.add_argument('release_id', metavar='RELEASE_ID')
         subcmd.set_defaults(func=self.release_info)
 
-        subcmd = parsers.add_parser('release-update')
+        subcmd = self.add_admin_command('release-update',
+                                        help='update an existing release')
         subcmd.add_argument('release_id', metavar='RELEASE_ID')
         self.add_release_arguments(subcmd)
         subcmd.set_defaults(func=self.release_update)
 
-        subcmd = parsers.add_parser('release-create')
+        subcmd = self.add_admin_command('release-create',
+                                        help='create new release')
         self.add_release_arguments(subcmd)
         subcmd.set_defaults(func=self.release_create)
 

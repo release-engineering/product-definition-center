@@ -13,8 +13,8 @@
 # to define multiple plugins in a single file.
 #
 # Each plugin must define `register` method. It is used to register command
-# line arguments and subcommands. The plugin can also these predefined
-# properties:
+# line arguments and subcommands. There are helper methods `add_command` and
+# `add_admin_command`. The plugin can also these predefined properties:
 #   * logger - this logger inherits settings from the client
 #   * client - instance of PDClient connected to a server
 #
@@ -34,6 +34,7 @@
 
 import logging
 import itertools
+import sys
 
 
 DATA_PREFIX = 'data__'
@@ -47,6 +48,7 @@ class PDCClientPlugin(object):
     def __init__(self, runner):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.runner = runner
+        self.help_all = '--help-all' in sys.argv
 
     @property
     def client(self):
@@ -55,8 +57,28 @@ class PDCClientPlugin(object):
     def run_hook(self, hook, *args, **kwargs):
         self.runner.run_hook(hook, *args, **kwargs)
 
-    def register(self, parsers):
+    def _before_register(self, parser):
+        self.parser = parser
+
+    def register(self):
         raise NotImplementedError('Plugin must implement `register` method.')
+
+    def add_command(self, *args, **kwargs):
+        """Define new subcommand.
+
+        For accepted arguments, see `argparse.ArgumentParser.add_argument`.
+        """
+        return self.parser.add_parser(*args, **kwargs)
+
+    def add_admin_command(self, *args, **kwargs):
+        """Define new admin subcommand.
+
+        Help of this subcommand will be hidden for regular --help option, but
+        will show when --help-all is used. Otherwise identical to add_command.
+        """
+        if not self.help_all:
+            kwargs.pop('help', None)
+        return self.parser.add_parser(*args, **kwargs)
 
 
 def get_paged(res, **kwargs):

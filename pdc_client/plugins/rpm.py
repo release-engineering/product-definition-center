@@ -11,23 +11,25 @@ from pdc_client.plugins import PDCClientPlugin, get_paged, add_parser_arguments,
 
 
 class RPMPlugin(PDCClientPlugin):
-    def register(self, parsers):
-        subcmd = parsers.add_parser('rpm-list', help='list all rpms')
+    def register(self):
+        subcmd = self.add_command('rpm-list', help='list all rpms')
         filters = ('name version release arch compose conflicts obsoletes provides '
                    'suggests recommends requires'.split())
         for arg in filters:
             subcmd.add_argument('--' + arg, dest='filter_' + arg)
         subcmd.set_defaults(func=self.rpm_list)
 
-        subcmd = parsers.add_parser('rpm-info', help='display details of an RPM')
+        subcmd = self.add_command('rpm-info', help='display details of an RPM')
         subcmd.add_argument('rpmid', metavar='ID')
         subcmd.set_defaults(func=self.rpm_info)
 
-        subcmd = parsers.add_parser('rpm-create')
+        subcmd = self.add_admin_command('rpm-create',
+                                        help='create new RPM')
         self.add_rpm_arguments(subcmd)
         subcmd.set_defaults(func=self.rpm_create)
 
-        subcmd = parsers.add_parser('rpm-update')
+        subcmd = self.add_admin_command('rpm-update',
+                                        help='update existing RPM')
         subcmd.add_argument('rpmid', metavar='ID')
         self.add_rpm_arguments(subcmd)
         subcmd.set_defaults(func=self.rpm_update)
