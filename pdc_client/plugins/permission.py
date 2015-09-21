@@ -17,7 +17,7 @@ class PermissionPlugin(PDCClientPlugin):
     def permission_list(self, args):
         permissions = self.__get_permissions(self.client.auth['current-user'])
         if args.json:
-            print json.dumps(list(permissions))
+            print json.dumps(permissions)
             return
 
         for permission in sorted(permissions):
