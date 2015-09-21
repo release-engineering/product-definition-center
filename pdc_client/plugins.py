@@ -100,14 +100,6 @@ def get_paged(res, **kwargs):
     return itertools.chain.from_iterable(worker())
 
 
-def get_permissions(res, **kwargs):
-    """
-    This call returns current login user's permissions.
-    """
-    response = res(**kwargs)
-    return response.get('permissions', None)
-
-
 def add_parser_arguments(parser, args, group=None, prefix=DATA_PREFIX):
     """
     Helper method that populates parser arguments. The argument values can

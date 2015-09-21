@@ -6,7 +6,7 @@
 #
 import json
 
-from pdc_client.plugins import PDCClientPlugin, get_permissions
+from pdc_client.plugins import PDCClientPlugin
 
 
 class PermissionPlugin(PDCClientPlugin):
@@ -15,13 +15,20 @@ class PermissionPlugin(PDCClientPlugin):
         subcmd.set_defaults(func=self.permission_list)
 
     def permission_list(self, args):
-        permissions = get_permissions(self.client.auth['current-user'])
+        permissions = self.__get_permissions(self.client.auth['current-user'])
         if args.json:
             print json.dumps(list(permissions))
             return
 
         for permission in sorted(permissions):
             print permission
+
+    def __get_permissions(self, res, **kwargs):
+        """
+        This call returns current login user's permissions.
+        """
+        response = res(**kwargs)
+        return response.get('permissions', None)
 
 
 PLUGIN_CLASSES = [PermissionPlugin]
