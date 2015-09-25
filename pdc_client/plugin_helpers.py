@@ -130,9 +130,18 @@ def extract_arguments(args, prefix=DATA_PREFIX):
     for key, value in args.__dict__.iteritems():
         if key.startswith(prefix) and value is not None:
             parts = key[len(prefix):].split('__')
-            d = data
-            for p in parts[:-1]:
-                d[p] = {}
-                d = d[p]
-            d[parts[-1]] = value if value != '' else None
+            if len(parts) == 1:
+                data[parts[0]] = value if value != '' else None
+            elif len(parts) > 1:
+                temp_dict = dict()
+                for p in reversed(parts):
+                    if not temp_dict:
+                        temp_dict = {p: value if value != '' else None}
+                    else:
+                        temp_dict = {p: temp_dict}
+                if temp_dict:
+                    if p in data:
+                        data[p].update(temp_dict[p])
+                    else:
+                        data.update(temp_dict)
     return data
