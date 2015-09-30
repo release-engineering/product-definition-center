@@ -151,3 +151,9 @@ router.register(r'content-delivery-content-format', repo_views.ContentFormatView
                 base_name='contentdeliverycontentformat')
 router.register(r'content-delivery-service', repo_views.ServiceViewSet,
                 base_name='contentdeliveryservice')
+router.register(r'global-component-contacts',
+                component_views.GlobalComponentContactInfoViewSet,
+                base_name='globalcomponentcontacts')
+router.register(r'release-component-contacts',
+                component_views.ReleaseComponentContactInfoViewSet,
+                base_name='releasecomponentcontacts')
