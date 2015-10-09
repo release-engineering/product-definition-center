@@ -15,8 +15,6 @@ from os.path import expanduser, isfile
 
 import monkey_patch
 
-monkey_patch.monkey_patch_kerberos()
-
 GLOBAL_CONFIG_FILE = '/etc/pdc/client_config.json'
 USER_SPECIFIC_CONFIG_FILE = expanduser('~/.config/pdc/client_config.json')
 CONFIG_URL_KEY_NAME = 'host'
