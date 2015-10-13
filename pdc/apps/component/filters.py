@@ -151,6 +151,7 @@ class ReleaseComponentFilter(ComposeFilterSet):
     brew_package = MultiValueFilter()
     active = CaseInsensitiveBooleanFilter()
     type = CharFilter(name='type__name')
+    dist_git_branch = MultiValueFilter()
 
     @value_is_not_empty
     def filter_together(self, qs, value):
@@ -259,7 +260,7 @@ class ReleaseComponentFilter(ComposeFilterSet):
     class Meta:
         model = ReleaseComponent
         fields = ('name', 'release', 'email', 'contact_role', 'global_component', 'active',
-                  'bugzilla_component', 'type')
+                  'bugzilla_component', 'type', 'dist_git_branch')
 
 
 class BugzillaComponentFilter(ComposeFilterSet):

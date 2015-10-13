@@ -828,6 +828,17 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
 
+    def test_filter_release_component_by_dist_git_branch(self):
+        url = reverse('releasecomponent-detail', kwargs={'pk': 1})
+        data = {'dist_git_branch': 'python3.0'}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = reverse('releasecomponent-list')
+        response = self.client.get(url + '?dist_git_branch=python3.0', format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
     def test_detail_release_component(self):
         url = reverse('releasecomponent-detail', kwargs={'pk': 1})
         response = self.client.get(url, format='json')
