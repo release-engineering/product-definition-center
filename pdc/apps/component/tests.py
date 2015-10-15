@@ -833,11 +833,13 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         url = reverse('releasecomponent-list')
         response = self.client.get(url + '?dist_git_branch=release_branch', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 2)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['name'], 'MySQL-python')
 
         response = self.client.get(url + '?dist_git_branch=test_branch', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['name'], 'python27')
 
     def test_detail_release_component(self):
         url = reverse('releasecomponent-detail', kwargs={'pk': 1})
