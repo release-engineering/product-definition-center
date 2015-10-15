@@ -716,6 +716,7 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         pyth = models.BugzillaComponent.objects.create(name='python', parent_component=bugzilla_component)
         models.BugzillaComponent.objects.create(name='bin', parent_component=pyth)
         rc_bz.bugzilla_component = bugzilla_component
+        rc_bz.dist_git_branch = 'test_branch'
         rc_bz.save()
 
     def test_list_active_release_component(self):
@@ -829,13 +830,12 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.data['count'], 0)
 
     def test_filter_release_component_by_dist_git_branch(self):
-        url = reverse('releasecomponent-detail', kwargs={'pk': 1})
-        data = {'dist_git_branch': 'python3.0'}
-        response = self.client.patch(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
         url = reverse('releasecomponent-list')
-        response = self.client.get(url + '?dist_git_branch=python3.0', format='json')
+        response = self.client.get(url + '?dist_git_branch=release_branch', format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+
+        response = self.client.get(url + '?dist_git_branch=test_branch', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
 
@@ -844,7 +844,7 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'python27')
-        self.assertEqual(response.data['dist_git_branch'], 'release_branch')
+        self.assertEqual(response.data['dist_git_branch'], 'test_branch')
 
     def test_release_component_contacts_url(self):
         url = reverse('releasecomponentcontact-list', kwargs={'instance_pk': 1})

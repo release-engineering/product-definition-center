@@ -151,7 +151,12 @@ class ReleaseComponentFilter(ComposeFilterSet):
     brew_package = MultiValueFilter()
     active = CaseInsensitiveBooleanFilter()
     type = CharFilter(name='type__name')
-    dist_git_branch = MultiValueFilter()
+    dist_git_branch = MethodFilter(action='filter_by_dist_git_branch', widget=SelectMultiple)
+
+    @value_is_not_empty
+    def filter_by_dist_git_branch(self, qs, value):
+        q = Q(dist_git_branch__in=value) | Q(release__releasedistgitmapping__dist_git_branch__in=value)
+        return qs.filter(q)
 
     @value_is_not_empty
     def filter_together(self, qs, value):
