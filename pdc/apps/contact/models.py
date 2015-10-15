@@ -13,6 +13,8 @@ from django.forms.models import model_to_dict
 class ContactRole(models.Model):
 
     name = models.CharField(max_length=128, unique=True)
+    count_limit = models.IntegerField(default=1)
+    UNLIMITED = 0
 
     def __unicode__(self):
         return u"%s" % self.name
@@ -153,7 +155,7 @@ class GlobalComponentContact(models.Model):
         return u'%s: %s: %s' % (unicode(self.component), self.contact_role, unicode(self.contact))
 
     class Meta:
-        unique_together = (('role', 'component'),)
+        unique_together = (('role', 'component', 'contact'), )
 
     def export(self, fields=None):
         return {
@@ -174,7 +176,7 @@ class ReleaseComponentContact(models.Model):
         return u'%s: %s: %s' % (unicode(self.component), self.contact_role, unicode(self.contact))
 
     class Meta:
-        unique_together = (('role', 'component'), )
+        unique_together = (('role', 'component', 'contact'), )
 
     def export(self, fields=None):
         return {

@@ -541,12 +541,39 @@ class ReleaseComponentRelationshipSerializer(StrictSerializerMixin, serializers.
         fields = ('id', 'type', 'from_component', 'to_component')
 
 
+def _check_role_count(component_contact_model, component, role):
+    current_role_count = component_contact_model.objects.filter(component=component, role=role).count()
+    if role.count_limit != ContactRole.UNLIMITED and current_role_count >= role.count_limit:
+        raise serializers.ValidationError({
+            'detail': 'Exceed contact role limit for the component. The limit is %d' % role.count_limit})
+
+
+def validate_component_role_count(component_contact_model, value, instance):
+    role = value.get('role')
+    component = value.get('component')
+    # POST with role
+    if not instance and role:
+        _check_role_count(component_contact_model, component, role)
+
+    # PUT or PATCH
+    else:
+        if (role and role != instance.role) or (component and component != instance.component):
+            # with model unique restriction, it will increase 1 to destination component's role count.
+            role = role if role else instance.role
+            component = component if component else instance.component
+            _check_role_count(component_contact_model, component, role)
+
+
 class GlobalComponentContactSerializer(StrictSerializerMixin, serializers.ModelSerializer):
     component = serializers.SlugRelatedField(slug_field='name', read_only=False,
                                              queryset=GlobalComponent.objects.all())
     role = serializers.SlugRelatedField(slug_field='name', read_only=False,
                                         queryset=ContactRole.objects.all())
     contact = ContactField()
+
+    def validate(self, value):
+        validate_component_role_count(GlobalComponentContact, value, self.instance)
+        return value
 
     class Meta:
         model = GlobalComponentContact
@@ -559,6 +586,10 @@ class ReleaseComponentContactSerializer(StrictSerializerMixin, serializers.Model
     role = serializers.SlugRelatedField(slug_field='name', read_only=False,
                                         queryset=ContactRole.objects.all())
     contact = ContactField()
+
+    def validate(self, value):
+        validate_component_role_count(ReleaseComponentContact, value, self.instance)
+        return value
 
     class Meta:
         model = ReleaseComponentContact
