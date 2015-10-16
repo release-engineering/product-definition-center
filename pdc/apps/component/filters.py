@@ -155,12 +155,9 @@ class ReleaseComponentFilter(ComposeFilterSet):
 
     @value_is_not_empty
     def filter_by_dist_git_branch(self, qs, value):
-        result = qs.filter(dist_git_branch__in=value)
-        if result:
-            return result
-        else:
-            q = Q(release__releasedistgitmapping__dist_git_branch__in=value) and Q(dist_git_branch__isnull=True)
-            return qs.filter(q)
+        q = Q(dist_git_branch__in=value) | Q(release__releasedistgitmapping__dist_git_branch__in=value,
+                                             dist_git_branch__isnull=True)
+        return qs.filter(q)
 
     @value_is_not_empty
     def filter_together(self, qs, value):

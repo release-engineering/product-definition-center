@@ -829,17 +829,30 @@ class ReleaseComponentRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
 
-    def test_filter_release_component_by_dist_git_branch(self):
+    def test_filter_release_component_by_release_dist_git_branch(self):
         url = reverse('releasecomponent-list')
         response = self.client.get(url + '?dist_git_branch=release_branch', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['name'], 'MySQL-python')
 
+    def test_filter_release_component_by_override_dist_git_branch(self):
+        url = reverse('releasecomponent-list')
         response = self.client.get(url + '?dist_git_branch=test_branch', format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['name'], 'python27')
+
+    def test_filter_release_component_by_override_same_dist_git_branch(self):
+        url = reverse('releasecomponent-detail', kwargs={'pk': 1})
+        data = {'dist_git_branch': 'release_branch'}
+        self.client.patch(url, data, format='json')
+        url = reverse('releasecomponent-list')
+        response = self.client.get(url + '?dist_git_branch=release_branch', format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+        self.assertEqual(response.data['results'][0]['name'], 'python27')
+        self.assertEqual(response.data['results'][1]['name'], 'MySQL-python')
 
     def test_detail_release_component(self):
         url = reverse('releasecomponent-detail', kwargs={'pk': 1})
