@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
+from django.core.exceptions import ValidationError
 
 
 class ContactRole(models.Model):
@@ -144,7 +145,27 @@ class RoleContactSpecificManager(models.Manager):
         return self.get_queryset().create(**create_kwargs)
 
 
-class GlobalComponentContact(models.Model):
+class ValidateRoleCountMixin(object):
+
+    def _check_role_count(self):
+        current_role_count = type(self).objects.filter(component=self.component, role=self.role).count()
+        if self.role.count_limit != ContactRole.UNLIMITED and current_role_count >= self.role.count_limit:
+            raise ValidationError(
+                {'detail': 'Exceed contact role limit for the component. The limit is %d' % self.role.count_limit})
+
+    def clean(self):
+        # Create
+        if not self.pk:
+            self._check_role_count()
+        # Update
+        else:
+            old_instance = type(self).objects.get(pk=self.pk)
+            if self.role != old_instance.role or self.component != old_instance.component:
+                # with model unique restriction, it will increase 1 to destination component's role count.
+                self._check_role_count()
+
+
+class GlobalComponentContact(ValidateRoleCountMixin, models.Model):
 
     role      = models.ForeignKey(ContactRole, on_delete=models.PROTECT)
     contact   = models.ForeignKey(Contact, on_delete=models.PROTECT)
@@ -165,7 +186,7 @@ class GlobalComponentContact(models.Model):
         }
 
 
-class ReleaseComponentContact(models.Model):
+class ReleaseComponentContact(ValidateRoleCountMixin, models.Model):
 
     role      = models.ForeignKey(ContactRole, on_delete=models.PROTECT)
     contact   = models.ForeignKey(Contact, on_delete=models.PROTECT)
@@ -173,7 +194,7 @@ class ReleaseComponentContact(models.Model):
                                   on_delete=models.PROTECT)
 
     def __unicode__(self):
-        return u'%s: %s: %s' % (unicode(self.component), self.contact_role, unicode(self.contact))
+        return u'%s: %s: %s' % (unicode(self.component), self.role, unicode(self.contact))
 
     class Meta:
         unique_together = (('role', 'component', 'contact'), )

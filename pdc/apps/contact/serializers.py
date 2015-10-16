@@ -20,7 +20,7 @@ class ContactRoleSerializer(StrictSerializerMixin,
 
     class Meta:
         model = ContactRole
-        fields = ('name', )
+        fields = ('name', 'count_limit')
 
 
 class PersonSerializer(DynamicFieldsSerializerMixin,
