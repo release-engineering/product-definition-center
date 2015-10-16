@@ -9,12 +9,14 @@ from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
 from django.core.exceptions import ValidationError
+from django.utils.translation import ugettext_lazy as _
 
 
 class ContactRole(models.Model):
 
     name = models.CharField(max_length=128, unique=True)
-    count_limit = models.IntegerField(default=1)
+    count_limit = models.IntegerField(default=1,
+                                      help_text=_('Contact count limit of the role for each component.'))
     UNLIMITED = 0
 
     def __unicode__(self):
@@ -165,7 +167,7 @@ class GlobalComponentContact(ValidateRoleCountMixin, models.Model):
                                   on_delete=models.PROTECT)
 
     def __unicode__(self):
-        return u'%s: %s: %s' % (unicode(self.component), self.role, unicode(self.contact))
+        return u'%s: %s: %s' % (unicode(self.component), unicode(self.role), unicode(self.contact))
 
     class Meta:
         unique_together = (('role', 'component', 'contact'), )
@@ -186,7 +188,7 @@ class ReleaseComponentContact(ValidateRoleCountMixin, models.Model):
                                   on_delete=models.PROTECT)
 
     def __unicode__(self):
-        return u'%s: %s: %s' % (unicode(self.component), self.role, unicode(self.contact))
+        return u'%s: %s: %s' % (unicode(self.component), unicode(self.role), unicode(self.contact))
 
     class Meta:
         unique_together = (('role', 'component', 'contact'), )
