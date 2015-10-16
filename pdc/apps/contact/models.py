@@ -173,7 +173,7 @@ class GlobalComponentContact(ValidateRoleCountMixin, models.Model):
                                   on_delete=models.PROTECT)
 
     def __unicode__(self):
-        return u'%s: %s: %s' % (unicode(self.component), self.contact_role, unicode(self.contact))
+        return u'%s: %s: %s' % (unicode(self.component), self.role, unicode(self.contact))
 
     class Meta:
         unique_together = (('role', 'component', 'contact'), )
