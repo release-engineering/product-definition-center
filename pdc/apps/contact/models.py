@@ -147,22 +147,14 @@ class RoleContactSpecificManager(models.Manager):
 
 class ValidateRoleCountMixin(object):
 
-    def _check_role_count(self):
-        current_role_count = type(self).objects.filter(component=self.component, role=self.role).count()
-        if self.role.count_limit != ContactRole.UNLIMITED and current_role_count >= self.role.count_limit:
-            raise ValidationError(
-                {'detail': 'Exceed contact role limit for the component. The limit is %d' % self.role.count_limit})
-
     def clean(self):
-        # Create
-        if not self.pk:
-            self._check_role_count()
-        # Update
-        else:
-            old_instance = type(self).objects.get(pk=self.pk)
-            if self.role != old_instance.role or self.component != old_instance.component:
-                # with model unique restriction, it will increase 1 to destination component's role count.
-                self._check_role_count()
+        if self.role.count_limit != ContactRole.UNLIMITED:
+            q = type(self).objects.filter(component=self.component, role=self.role)
+            if self.pk:
+                q = q.exclude(pk=self.pk)
+            if q.count() >= self.role.count_limit:
+                raise ValidationError(
+                    {'detail': 'Exceed contact role limit for the component. The limit is %d.' % self.role.count_limit})
 
 
 class GlobalComponentContact(ValidateRoleCountMixin, models.Model):

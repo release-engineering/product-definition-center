@@ -18,6 +18,10 @@ class ContactRoleSerializer(StrictSerializerMixin,
                             serializers.HyperlinkedModelSerializer):
     name = serializers.SlugField()
 
+    def to_representation(self, instance):
+        count_limit = instance.count_limit if instance.count_limit != ContactRole.UNLIMITED else 'unlimited'
+        return {'name': instance.name, 'count_limit': count_limit}
+
     class Meta:
         model = ContactRole
         fields = ('name', 'count_limit')
