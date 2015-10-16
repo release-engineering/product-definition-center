@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='contactrole',
             name='count_limit',
-            field=models.IntegerField(default=1),
+            field=models.IntegerField(default=1, help_text='Contact count limit of the role for each component.'),
         ),
         migrations.AlterUniqueTogether(
             name='globalcomponentcontact',
