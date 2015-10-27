@@ -12,23 +12,25 @@ from pdc_client.plugin_helpers import PDCClientPlugin, add_parser_arguments, ext
 
 class ComposePlugin(PDCClientPlugin):
     def register(self):
-        subcmd = self.add_command('compose-list', help='list all composes')
-        subcmd.add_argument('--deleted', action='store_true',
+        self.set_command('compose', help='compose')
+
+        list_parser = self.add_subcommand('list', help='list all composes')
+        list_parser.add_argument('--deleted', action='store_true',
                             help='show deleted composes')
-        subcmd.set_defaults(func=self.list_composes)
+        list_parser.set_defaults(func=self.list_composes)
 
-        subcmd = self.add_command('compose-info', help='display details of a compose')
-        subcmd.add_argument('compose_id', metavar='COMPOSE_ID')
-        subcmd.set_defaults(func=self.compose_info)
+        info_parser = self.add_subcommand('info', help='display details of a compose')
+        info_parser.add_argument('compose_id', metavar='COMPOSE_ID')
+        info_parser.set_defaults(func=self.compose_info)
 
-        subcmd = self.add_admin_command('compose-update',
+        update_parser = self.add_admin_subcommand('update',
                                         help='partial update an existing compose.',
                                         description='only some compose fields can be modified by this call.\
-                                                    these are acceptance_testing, linked_releases and rtt_tested_architectures.')
-        subcmd.add_argument('compose_id', metavar='COMPOSE_ID')
-        self.add_compose_arguments(subcmd)
-        subcmd.set_defaults(func=self.compose_update)
-        self.compose_update = subcmd
+                                            these are acceptance_testing, linked_releases and rtt_tested_architectures.')
+        update_parser.add_argument('compose_id', metavar='COMPOSE_ID')
+        self.add_compose_arguments(update_parser)
+        update_parser.set_defaults(func=self.compose_update)
+        self.compose_update = update_parser
 
     def add_compose_arguments(self, parser):
         add_parser_arguments(parser, {

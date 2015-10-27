@@ -31,10 +31,12 @@ def size_format(num):
 
 class ImagePlugin(PDCClientPlugin):
     def register(self):
-        subcmd = self.add_command('image-list', help='list all images')
-        subcmd.add_argument('--show-sha256', action='store_true',
+        self.set_command('image', help='image')
+
+        list_parser = self.add_subcommand('list', help='list all images')
+        list_parser.add_argument('--show-sha256', action='store_true',
                             help='whether to display SHA256 checksums along with the file names')
-        add_parser_arguments(subcmd, {'arch': {},
+        add_parser_arguments(list_parser, {'arch': {},
                                       'compose': {},
                                       'file_name': {},
                                       'image_format': {},
@@ -45,13 +47,12 @@ class ImagePlugin(PDCClientPlugin):
                                       'sha256': {},
                                       'volume_id': {}},
                              group='Filtering')
-        subcmd.set_defaults(func=self.image_list)
+        list_parser.set_defaults(func=self.image_list)
 
-        subcmd = self.add_command('image-info', help='display details of an image',
-                                  description=info_desc)
-        subcmd.add_argument('filename', metavar='FILENAME')
-        subcmd.add_argument('--sha256', nargs='?')
-        subcmd.set_defaults(func=self.image_info)
+        info_parser = self.add_subcommand('info', help='display details of an image', description=info_desc)
+        info_parser.add_argument('filename', metavar='FILENAME')
+        info_parser.add_argument('--sha256', nargs='?')
+        info_parser.set_defaults(func=self.image_info)
 
     def _print_image_list(self, images, with_sha=False):
         fmt = '{file_name}'
