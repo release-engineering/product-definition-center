@@ -73,9 +73,7 @@ class Runner(object):
     def setup(self):
         self.load_plugins()
 
-        self.parser = argparse.ArgumentParser(description='PDC Client')
-        self.parser.add_argument('--help-all', action='help',
-                                 help='show help including all commands')
+        self.parser = PDCArgumentParser(description='PDC Client')
         self.parser.add_argument('-s', '--server', default='stage',
                                  help='API URL or shortcut from config file')
         self.parser.add_argument('--debug', action='store_true', help=argparse.SUPPRESS)
@@ -124,3 +122,21 @@ class Runner(object):
                 print '{}:'.format(key)
                 for error in value:
                     print ' * {}'.format(error)
+
+
+class PDCArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        argparse.ArgumentParser.__init__(self, *args, **kwargs)
+        self.formatter_class = CommandHelpFormatter
+
+
+class CommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    '''
+    This is used to leave out the first line of help information in order to make it cleaner.
+    '''
+    def _format_action(self, action):
+        parts = super(argparse.RawDescriptionHelpFormatter, self)._format_action(action)
+        if action.nargs == argparse.PARSER:
+            parts = "\n".join(parts.split("\n")[1:])
+        return parts
+

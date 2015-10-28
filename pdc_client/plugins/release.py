@@ -14,27 +14,27 @@ from pdc_client.plugin_helpers import (PDCClientPlugin,
 
 class ReleasePlugin(PDCClientPlugin):
     def register(self):
-        subcmd = self.add_command('release-list', help='list all releases')
-        subcmd.add_argument('--inactive', action='store_true',
+        self.set_command('release', help='release')
+
+        list_parser = self.add_subcommand('list', help='list all releases')
+        list_parser.add_argument('--inactive', action='store_true',
                             help='show only inactive releases')
-        subcmd.add_argument('--all', action='store_true',
+        list_parser.add_argument('--all', action='store_true',
                             help='show both active and inactive releases')
-        subcmd.set_defaults(func=self.list_releases)
+        list_parser.set_defaults(func=self.list_releases)
 
-        subcmd = self.add_command('release-info', help='display details of a release')
-        subcmd.add_argument('release_id', metavar='RELEASE_ID')
-        subcmd.set_defaults(func=self.release_info)
+        info_parser = self.add_subcommand('info', help='display details of a release')
+        info_parser.add_argument('release_id', metavar='RELEASE_ID')
+        info_parser.set_defaults(func=self.release_info)
 
-        subcmd = self.add_admin_command('release-update',
-                                        help='update an existing release')
-        subcmd.add_argument('release_id', metavar='RELEASE_ID')
-        self.add_release_arguments(subcmd)
-        subcmd.set_defaults(func=self.release_update)
+        update_parser = self.add_admin_subcommand('update', help='update an existing release')
+        update_parser.add_argument('release_id', metavar='RELEASE_ID')
+        self.add_release_arguments(update_parser)
+        update_parser.set_defaults(func=self.release_update)
 
-        subcmd = self.add_admin_command('release-create',
-                                        help='create new release')
-        self.add_release_arguments(subcmd, required=True)
-        subcmd.set_defaults(func=self.release_create)
+        create_parser = self.add_admin_subcommand('create', help='create new release')
+        self.add_release_arguments(create_parser, required=True)
+        create_parser.set_defaults(func=self.release_create)
 
     def add_release_arguments(self, parser, required=False):
         group = parser.add_mutually_exclusive_group()
