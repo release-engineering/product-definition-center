@@ -39,8 +39,8 @@ router.register(r'base-products', release_views.BaseProductViewSet)
 router.register(r'release-types', release_views.ReleaseTypeViewSet, base_name='releasetype')
 
 # TODO: these two end-points will be removed
-router.register(r'persons', contact_views.PersonViewSet, base_name='persondeperated')
-router.register(r'maillists', contact_views.MaillistViewSet, base_name='maillistdeperated')
+router.register(r'persons', contact_views.PersonViewSet, base_name='persondeprecated')
+router.register(r'maillists', contact_views.MaillistViewSet, base_name='maillistdeprecated')
 
 # register contact view sets
 router.register(r'contacts/people', contact_views.PersonViewSet, base_name='person')
