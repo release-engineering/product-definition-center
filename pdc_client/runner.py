@@ -12,14 +12,7 @@ import os.path
 import logging
 import imp
 
-# The client supports Bash completion if argcomplete Python package is
-# installed. To enable it, run this in your terminal (assuming pdc is somewhere
-# on path).
-#
-#     eval "$(register-python-argcomplete pdc)"
-#
-# This is only a temporary solution, when the client is packaged, a completion
-# file should be shipped with it and installed to /etc/bash_completion.d/.
+# The client supports Bash completion if argcomplete Python package is installed.
 try:
     import argcomplete
 except ImportError:

@@ -40,12 +40,16 @@ install -m 0644 -D -p bin/pdc %{buildroot}%{_bindir}/pdc
 install -m 0644 -D -p docs/pdc_client.1 %{buildroot}%{_mandir}/man1/pdc_client.1
 gzip %{buildroot}%{_mandir}/man1/pdc_client.1
 
+# Install bash completion file
+install -m 0644 -D -p python-argcomplete.sh %{buildroot}%{_sysconfdir}/bash_completion.d/python-argcomplete.sh
+
 
 %files
 %{python_sitelib}/pdc_client
 %attr(755, root, root) %{_bindir}/pdc_client
 %attr(755, root, root) %{_bindir}/pdc
 %{_mandir}/man1/pdc_client.1.gz
+%{_sysconfdir}/bash_completion.d/python-argcomplete.sh
 
 
 %changelog
