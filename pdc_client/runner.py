@@ -4,6 +4,9 @@
 # Licensed under The MIT License (MIT)
 # http://opensource.org/licenses/MIT
 #
+
+from __future__ import print_function
+
 import sys
 import argparse
 import beanbag
@@ -29,6 +32,7 @@ except ImportError:
             pass
 
 import pdc_client
+from pdc_client.utils import pretty_print
 
 
 # A list of paths to directories where plugins should be loaded from.
@@ -95,15 +99,24 @@ class Runner(object):
             self.args.func(self.args)
         except beanbag.BeanBagException as exc:
             self.print_error_header(exc)
+            json = None
             try:
-                self.print_error_details(exc.response.json())
+                json = exc.response.json()
+                pretty_print(json, file=sys.stderr)
             except ValueError:
-                pass
+                # Response was not JSON
+                print('Failed to parse error response.', file=sys.stderr)
+            except TypeError as e:
+                # Failed to pretty print.
+                print('Failed to correctly display error message. Please file a bug.',
+                      file=sys.stderr)
+                self.logger.info(json, exc_info=e)
             sys.exit(1)
 
     def print_error_header(self, exc):
         if exc.response.status_code > 500:
-            print 'Internal server error. Please consider reporting a bug.'
+            print('Internal server error. Please consider reporting a bug.',
+                  file=sys.stderr)
         else:
             headers = {
                 400: 'bad request data',
@@ -111,14 +124,5 @@ class Runner(object):
                 404: 'not found',
                 409: 'conflict',
             }
-            print 'Client error: {}.'.format(headers.get(exc.response.status_code, 'unknown'))
-
-    def print_error_details(self, body):
-        self.logger.debug(body)
-        for key, value in body.iteritems():
-            if isinstance(value, basestring):
-                print '{}: {}'.format(key, value)
-            else:
-                print '{}:'.format(key)
-                for error in value:
-                    print ' * {}'.format(error)
+            print('Client error: {}.'.format(headers.get(exc.response.status_code, 'unknown')),
+                  file=sys.stderr)
