@@ -85,6 +85,12 @@ requests manually.
 This is much more user friendly user interface. A single invocation can perform
 multiple requests depending on what subcommand you used.
 
+Although auto-completion is inherently enabled for pdc, it will be disabled if
+`python-argcomplete` is not installed. To enable it, install `python-argcomplete`
+and activate by typing `activate-global-python-argcomplete` in command line.
+Please note that by doing this only global completion is enabled which is
+currently not compatible with zsh.
+
 
 Python API
 ----------
