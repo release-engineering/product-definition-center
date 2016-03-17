@@ -3,6 +3,8 @@
 # Licensed under The MIT License (MIT)
 # http://opensource.org/licenses/MIT
 #
+import json
+
 from django.conf import settings
 from django.utils import six
 
