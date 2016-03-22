@@ -96,7 +96,11 @@
                 </a>
                 <ul class="dropdown-menu" role="menu">
                   {% for i in m.items %}
+                    {% if i.title %}
                     <li class="menu-item{% if i.active %} active{% endif %}">{{ i.as_a }}</li>
+                    {% else %}
+                    <li class="divider" role="separator"></li>
+                    {% endif %}
                   {% endfor %}
                 </ul>
               </li>
