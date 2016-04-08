@@ -35,7 +35,7 @@ FROM fedora:21
 MAINTAINER Zhikun Lao <zlao@redhat.com>
 
 LABEL Description = "product-definition-center"
-LABEL Vendor = "Red Hat"
+LABEL Vendor = "Fedora"
 LABEL Version = "0.5"
 
 # patternfly1
