@@ -1027,7 +1027,7 @@ class ImageRESTTestCase(APITestCase):
     def test_list_all(self):
         response = self.client.get(reverse('image-list'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('count'), 3)
+        self.assertEqual(response.data.get('count'), 4)
 
     def test_query_file_name(self):
         response = self.client.get(reverse('image-list'), {'file_name': 'image-1'})
@@ -1050,6 +1050,12 @@ class ImageRESTTestCase(APITestCase):
         response = self.client.get(reverse('image-list'), {'subvariant': 'subvariant_not_exist'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('count'), 0)
+
+    def test_subvariant_default_empty_string(self):
+        response = self.client.get(reverse('image-list'), {'file_name': 'image-4'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('count'), 1)
+        self.assertEqual(response.data.get('results')[0]['subvariant'], '')
 
     def test_output_include_subvariant(self):
         response = self.client.get(reverse('image-list'), {'subvariant': 'subvariant_1'})
@@ -1125,7 +1131,7 @@ class ImageRESTTestCase(APITestCase):
     def test_negative_bootable(self):
         response = self.client.get(reverse('image-list'), {'bootable': 'false'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('count'), 2)
+        self.assertEqual(response.data.get('count'), 3)
 
     def test_active_bootable(self):
         response = self.client.get(reverse('image-list'), {'bootable': 'true'})

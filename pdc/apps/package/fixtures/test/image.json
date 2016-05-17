@@ -61,5 +61,25 @@
             "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
             "subvariant": "subvariant_3"
         }
+    },
+    {
+        "model": "package.Image",
+        "pk": 4,
+        "fields": {
+            "file_name": "image-4",
+            "image_format": 4,
+            "image_type": 4,
+            "disc_number": 4,
+            "disc_count": 4,
+            "arch": "ppc64",
+            "mtime": 444444444,
+            "size": 666666666,
+            "bootable": false,
+            "implant_md5": "cccccccccccccccccccccccccccccccc",
+            "volume_id": "image-4-volume_id",
+            "md5": "44444444444444444444444444444444",
+            "sha1": "4444444444444444444444444444444444444444",
+            "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+        }
     }
 ]
