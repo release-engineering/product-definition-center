@@ -53,6 +53,7 @@ def create_variant_types(apps, schema_editor):
         'optional',
         'addon',
         'layered-product',
+        'module',
     ]
     VariantType = apps.get_model('release', 'VariantType')
     for type in variants:
