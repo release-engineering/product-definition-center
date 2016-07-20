@@ -32,6 +32,8 @@ router.register(r'release-variants',
                 views.ReleaseVariantViewSet)
 router.register(r'release-variant-types', views.ReleaseVariantTypeViewSet,
                 base_name='releasevarianttype')
+router.register(r'release-interop-feature-categories', views.ReleaseInteropFeatureCategoriesViewSet,
+                base_name='releaseinteropfeaturecategories')
 
 # TODO: This API should be removed after 0.9.0 released
 router.register(r'variant-types', views.VariantTypeViewSet,

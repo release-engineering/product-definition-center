@@ -11,7 +11,8 @@ from pdc.apps.common import models as common_models
 from pdc.apps.common.serializers import StrictSerializerMixin
 from .models import (Product, ProductVersion, Release,
                      BaseProduct, ReleaseType, Variant,
-                     VariantArch, VariantType, ReleaseGroup, ReleaseGroupType)
+                     VariantArch, VariantType, ReleaseGroup,
+                     ReleaseGroupType, ReleaseInteropFeatureCategories)
 from . import signals
 
 
@@ -231,3 +232,19 @@ class ReleaseGroupSerializer(StrictSerializerMixin, serializers.ModelSerializer)
                 raise serializers.ValidationError({'detail': 'release %s does not exist' % release})
 
         return super(ReleaseGroupSerializer, self).to_internal_value(data)
+
+
+class ReleaseInteropFeatureCategoriesSerializer(StrictSerializerMixin, serializers.ModelSerializer):
+    name                 = serializers.SlugField(required=True)
+    description          = serializers.CharField(default='')
+
+    class Meta:
+        model = ReleaseInteropFeatureCategories
+        fields = ('name', 'description')
+
+    def to_internal_value(self, data):
+        """To check the name parameter: lower case and no whitespace"""
+        name = data.get('name', '')
+        if not name.islower():
+            raise serializers.ValidationError({'detail': 'name %s should be lower-case' % name})
+        return super(ReleaseInteropFeatureCategoriesSerializer, self).to_internal_value(data)

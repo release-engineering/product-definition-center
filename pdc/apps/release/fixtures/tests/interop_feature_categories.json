@@ -1,0 +1,18 @@
+[
+    {
+        "model": "release.ReleaseInteropFeatureCategories",
+        "pk": 1,
+        "fields": {
+            "name": "rhel1",
+            "description": "prepare for rhel os"
+        }
+    },
+    {
+        "model": "release.ReleaseInteropFeatureCategories",
+        "pk": 2,
+        "fields": {
+            "name": "rhel2",
+            "description": "prepare for rhel os"
+        }
+    }
+]
