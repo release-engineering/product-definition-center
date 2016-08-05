@@ -180,7 +180,6 @@ class StrictQueryParamMixin(object):
     value of ordering_fields means user can override ordering the results
     by given key.
     """
-    ordering_fields = '__all__'
 
     def initial(self, request, *args, **kwargs):
         super(StrictQueryParamMixin, self).initial(request, *args, **kwargs)
@@ -201,11 +200,17 @@ class StrictQueryParamMixin(object):
 
     def _check_ordering_keys(self, request):
         ordering_keys = request.query_params.get('ordering')
+        valid_fields_tmp = [
+            (field.source or field_name, field.label)
+            for field_name, field in self.serializer_class().fields.items()
+            if not getattr(field, 'write_only', False) and not field.source == '*']
+
+        valid_fields = [item[0] for item in valid_fields_tmp]
         tmp_list = [param.strip().lstrip('-') for param in ordering_keys.split(',')]
-        invalid_fields = set(tmp_list) - set(self.serializer_class.Meta.fields)
+        invalid_fields = set(tmp_list) - set(valid_fields)
         if invalid_fields:
             raise FieldError('Unknown query key: %s not in fields: %s' %
-                             (invalid_fields, self.serializer_class.Meta.fields))
+                             (invalid_fields, valid_fields))
 
 
 class PermissionMixin(object):
