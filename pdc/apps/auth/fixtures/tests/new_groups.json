@@ -1,0 +1,30 @@
+[
+{
+    "pk": 4,
+    "model": "auth.group",
+    "fields": {
+        "name": "group_test1",
+        "permissions": [
+            [
+                "add_group",
+                "auth",
+                "group"
+            ]
+        ]
+    }
+},
+{
+    "pk": 5,
+    "model": "auth.group",
+    "fields": {
+        "name": "group_test2",
+        "permissions": [
+            [
+                "change_group",
+                "auth",
+                "group"
+            ]
+        ]
+    }
+}
+]
