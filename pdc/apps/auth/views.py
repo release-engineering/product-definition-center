@@ -7,7 +7,7 @@
 import inspect
 import json
 from collections import OrderedDict
-from django.shortcuts import render, redirect, get_list_or_404, get_object_or_404
+from django.shortcuts import render, redirect, get_list_or_404
 
 from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
                                  load_backend)
@@ -44,7 +44,6 @@ from pdc.apps.utils.utils import (group_obj_export,
                                   convert_method_to_action,
                                   read_permission_for_all,
                                   urldecode)
-from pdc.apps.common.serializers import StrictSerializerMixin
 
 
 def remoteuserlogin(request):
@@ -923,29 +922,13 @@ class APIResourcePermissionViewSet(StrictQueryParamMixin,
     This end-point provides API resource permissions.
     """
     queryset = models.ResourcePermission.objects.all()
-    serializer_class = serializers.ResourcePermissionSerializer
+    serializer_class = serializers.APIResourcePermissionSerializer
     permission_classes = (APIPermission,)
     lookup_fields = (
         ('resource__name', r'[^/]+'),
         ('permission__name', r'[^/]+'),
     )
     filter_class = filters.ResourcePermissionFilter
-
-    def _get_users_and_groups(self, resource_permission):
-        members = dict()
-        try:
-            group_resource_permission_list = get_list_or_404(models.GroupResourcePermission,
-                                                             resource_permission=resource_permission)
-            groups_list = [str(obj.group.name) for obj in group_resource_permission_list]
-        except Http404:
-            pass
-        # get all users
-        superusers_set = {user.username for user in get_user_model().objects.filter(is_superuser=True)}
-        users_set = {user.username for user in get_user_model().objects.filter(groups__name__in=groups_list)}
-        users_list = list(superusers_set.union(users_set))
-        members['groups'] = sorted(groups_list)
-        members['users'] = sorted(users_list)
-        return members
 
     def list(self, request, *args, **kwargs):
         """
@@ -977,17 +960,7 @@ class APIResourcePermissionViewSet(StrictQueryParamMixin,
             }
 
         """
-        result = {}
-        resource_permission_list = self.filter_queryset(self.queryset)
-        page = self.paginate_queryset(resource_permission_list)
-        for obj in resource_permission_list:
-            member = self._get_users_and_groups(obj)
-            result.setdefault(obj.resource.name, OrderedDict()).setdefault(obj.permission.name, member)
-        if page is not None:
-            result = self.get_paginated_response(OrderedDict(sorted(result.items())))
-        else:
-            result = Response(OrderedDict(sorted(result.items())), status=status.HTTP_200_OK)
-        return result
+        return super(APIResourcePermissionViewSet, self).list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -1004,137 +977,4 @@ class APIResourcePermissionViewSet(StrictQueryParamMixin,
                 "groups": list,
             }
         """
-        resource_permission = self.get_object()
-        members = self._get_users_and_groups(resource_permission)
-        members['resource'] = resource_permission.resource.name
-        members['permission'] = resource_permission.permission.name
-        return Response(members, status=status.HTTP_200_OK)
-
-    def create(self, request, *args, **kwargs):
-        """
-        __Method__: POST
-
-        __URL__: $LINK:apiresourcepermissions-list$
-
-         __Data__:
-
-            {
-                "group": string,
-                "resource": string,
-                "permission": string
-            }
-
-        __Response__:
-
-            {
-                "group": string,
-                "resource": string,
-                "permission": string
-            }
-
-        __Info__:
-
-        Only the permission of Group can be created.
-        """
-        allowed_keys = ['group', 'resource', 'permission']
-        data = request.data
-        if data:
-            extra_keys = set(data.keys()) - set(allowed_keys)
-            StrictSerializerMixin.maybe_raise_error(extra_keys)
-        group_data = data.get('group')
-        resource_data = data.get('resource')
-        permission_data = data.get('permission')
-
-        # TODO: verify the resource permission whether existed
-        try:
-            resource_permission = get_object_or_404(models.ResourcePermission,
-                                                    resource__name=resource_data,
-                                                    permission__name=permission_data
-                                                    )
-        except Http404:
-            return Response({'detail': 'resource_permission %s is not existed' %
-                                       {'resource': resource_data, 'permission': permission_data}},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        # TODO: verify the group whether existed
-        try:
-            group_obj = get_object_or_404(models.Group, name=group_data)
-        except Http404:
-            return Response({'detail': 'Group %s is not existed' % group_data},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        # TODO: create the group resource permission instance.
-        group_resource_permission, created = models.GroupResourcePermission.objects.get_or_create(
-            resource_permission=resource_permission,
-            group=group_obj)
-        result = dict()
-        if created:
-            result = {'group': group_resource_permission.group.name,
-                      'resource': group_resource_permission.resource_permission.resource.name,
-                      'permission': group_resource_permission.resource_permission.permission.name}
-
-        if result:
-            return Response(status=status.HTTP_201_CREATED, data=result)
-        else:
-            return Response({'detail': 'GroupResourcePermission have existed in target release'},
-                            status=status.HTTP_200_OK)
-
-    def destroy(self, request, *args, **kwargs):
-        """
-        __Method__: DELETE
-
-        __URL__: $LINK:apiresourcepermissions-detail:resource}/{permission$
-
-
-         __Data__:
-
-            {
-                "group": string,
-            }
-
-
-        __Response__:
-
-        On success, HTTP status code is 204 and the response has no content.
-
-        __Info__:
-
-        Only the permission of Group can be removed.
-        """
-        data = self.kwargs
-        resource = data.pop('resource__name')
-        permission = data.pop('permission__name')
-        try:
-            models.ResourcePermission.objects.get(resource__name=resource, permission__name=permission)
-        except Http404:
-            return Response({'detail': 'resource_permission %s is not existed' % data},
-                            status=status.HTTP_404_NOT_FOUND)
-        group_data = request.data
-        group_list = self._get_multi_group(group_data)
-        if not isinstance(group_list, list):
-            group_list = [group_list]
-        try:
-            group_resource_permission_list = get_list_or_404(models.GroupResourcePermission,
-                                                             group__name__in=group_list,
-                                                             resource_permission__resource__name=resource,
-                                                             resource_permission__permission__name=permission
-                                                             )
-        except Http404:
-            return Response({'detail': 'group_resource_permission %s is not existed' % data},
-                            status=status.HTTP_404_NOT_FOUND)
-        for obj in group_resource_permission_list:
-            self.perform_destroy(obj)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def _get_multi_group(self, group_data):
-        # TODO: To get one or multi
-        if isinstance(group_data, dict) and 'group' in group_data:
-            return group_data['group']
-        elif isinstance(group_data, list):
-            group = list()
-            for para in group_data:
-                group.append(self._get_multi_group(para))
-            return group
-        else:
-            return Response(data={'group': ['This field is required.']},
-                            status=status.HTTP_400_BAD_REQUEST)
+        return super(APIResourcePermissionViewSet, self).retrieve(request, *args, **kwargs)

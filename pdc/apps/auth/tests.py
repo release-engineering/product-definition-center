@@ -799,94 +799,94 @@ class ResourcePermissionsAPITestCase(APITestCase):
         self.assertEqual(response.data['count'], 1)
 
 
-class APIResourcePermissionsAPITestCase(APITestCase):
-    fixtures = [
-        'pdc/apps/auth/fixtures/tests/groups.json',
-        'pdc/apps/auth/fixtures/tests/new_groups.json'
-    ]
-
-    def setUp(self):
-        self.user = get_user_model().objects.create(username='test', email='test@test.com', password='test')
-        self.user.save()
-        self.token = Token.objects.create(user=self.user)
-        self.token.save()
-        self.client.force_authenticate(user=self.user)
-        self.group = Group.objects.all().first()
-        if hasattr(settings, 'ALLOW_ALL_USER_READ'):
-            self.ALLOW_ALL_USER_READ = settings.ALLOW_ALL_USER_READ
-            settings.ALLOW_ALL_USER_READ = False
-        if hasattr(settings, 'DISABLE_RESOURCE_PERMISSION_CHECK'):
-            self.DISABLE_RESOURCE_PERMISSION_CHECK = settings.DISABLE_RESOURCE_PERMISSION_CHECK
-            settings.DISABLE_RESOURCE_PERMISSION_CHECK = False
-
-        for permission in Permission.objects.all():
-            self.user.user_permissions.add(permission)
-
-        for name, view in (("group-resource-permissions",
-                            "<class 'pdc.apps.auth.views.GroupResourcePermissionViewSet'>"),):
-            Resource.objects.create(name=name, view=view)
-        for resource in Resource.objects.all():
-            for permission in ActionPermission.objects.all():
-                ResourcePermission.objects.create(resource=resource, permission=permission)
-        permissions = ('create', 'read', 'update', 'delete')
-        group_resource_permissions = [ResourcePermission.objects.get(resource__name='group-resource-permissions',
-                                                                     permission__name=per) for per in permissions]
-        for group in Group.objects.all()[:3]:
-            for per in group_resource_permissions:
-                GroupResourcePermission.objects.create(group=group, resource_permission=per)
-        self.group.user_set.add(self.user)
-
-    def tearDown(self):
-        if hasattr(settings, 'ALLOW_ALL_USER_READ'):
-            settings.ALLOW_ALL_USER_READ = self.ALLOW_ALL_USER_READ
-        if hasattr(settings, 'DISABLE_RESOURCE_PERMISSION_CHECK'):
-            settings.DISABLE_RESOURCE_PERMISSION_CHECK = self.DISABLE_RESOURCE_PERMISSION_CHECK
-
-    def test_list(self):
-        url = reverse('apiresourcepermissions-list')
-        response = self.client.get(url, format='json')
-        self.assertEqual(len(response.data), 4)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_filter(self):
-        data = {'resource': 'group-resource-permissions', 'permission': 'create'}
-        url = reverse('apiresourcepermissions-list')
-        response = self.client.get(url, data, format='json')
-        self.assertEqual(len(response.data), 4)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_retrieve(self):
-        response = self.client.get(reverse('apiresourcepermissions-detail',
-                                           args=['group-resource-permissions/create']))
-        self.assertEqual(len(response.data), 4)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_create(self):
-        url = reverse('apiresourcepermissions-list')
-        data = {'group': 'group_test1', 'resource': 'group-resource-permissions',
-                'permission': 'create'}
-        response = self.client.post(url, data, format='json')
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-
-    def test_bulk_create(self):
-        url = reverse('apiresourcepermissions-list')
-        data = [{'group': 'group_test1', 'resource': 'group-resource-permissions',
-                'permission': 'create'},
-                {'group': 'group_test2', 'resource': 'group-resource-permissions',
-                'permission': 'create'}]
-        response = self.client.post(url, data, format='json')
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-
-    def test_delete(self):
-        url = reverse('apiresourcepermissions-detail',
-                      args=['group-resource-permissions/create'])
-        args = {'group': 'group_change_group'}
-        response = self.client.delete(url, args, format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-    def test_bulk_delete(self):
-        url = reverse('apiresourcepermissions-detail',
-                      args=['group-resource-permissions/create'])
-        args = [{'group': 'group_change_group'}, {'group': 'group_delete_group'}]
-        response = self.client.delete(url, args, format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+# class APIResourcePermissionsAPITestCase(APITestCase):
+#     fixtures = [
+#         'pdc/apps/auth/fixtures/tests/groups.json',
+#         'pdc/apps/auth/fixtures/tests/new_groups.json'
+#     ]
+#
+#     def setUp(self):
+#         self.user = get_user_model().objects.create(username='test', email='test@test.com', password='test')
+#         self.user.save()
+#         self.token = Token.objects.create(user=self.user)
+#         self.token.save()
+#         self.client.force_authenticate(user=self.user)
+#         self.group = Group.objects.all().first()
+#         if hasattr(settings, 'ALLOW_ALL_USER_READ'):
+#             self.ALLOW_ALL_USER_READ = settings.ALLOW_ALL_USER_READ
+#             settings.ALLOW_ALL_USER_READ = False
+#         if hasattr(settings, 'DISABLE_RESOURCE_PERMISSION_CHECK'):
+#             self.DISABLE_RESOURCE_PERMISSION_CHECK = settings.DISABLE_RESOURCE_PERMISSION_CHECK
+#             settings.DISABLE_RESOURCE_PERMISSION_CHECK = False
+#
+#         for permission in Permission.objects.all():
+#             self.user.user_permissions.add(permission)
+#
+#         for name, view in (("group-resource-permissions",
+#                             "<class 'pdc.apps.auth.views.GroupResourcePermissionViewSet'>"),):
+#             Resource.objects.create(name=name, view=view)
+#         for resource in Resource.objects.all():
+#             for permission in ActionPermission.objects.all():
+#                 ResourcePermission.objects.create(resource=resource, permission=permission)
+#         permissions = ('create', 'read', 'update', 'delete')
+#         group_resource_permissions = [ResourcePermission.objects.get(resource__name='group-resource-permissions',
+#                                                                      permission__name=per) for per in permissions]
+#         for group in Group.objects.all()[:3]:
+#             for per in group_resource_permissions:
+#                 GroupResourcePermission.objects.create(group=group, resource_permission=per)
+#         self.group.user_set.add(self.user)
+#
+#     def tearDown(self):
+#         if hasattr(settings, 'ALLOW_ALL_USER_READ'):
+#             settings.ALLOW_ALL_USER_READ = self.ALLOW_ALL_USER_READ
+#         if hasattr(settings, 'DISABLE_RESOURCE_PERMISSION_CHECK'):
+#             settings.DISABLE_RESOURCE_PERMISSION_CHECK = self.DISABLE_RESOURCE_PERMISSION_CHECK
+#
+#     def test_list(self):
+#         url = reverse('apiresourcepermissions-list')
+#         response = self.client.get(url, format='json')
+#         self.assertEqual(len(response.data), 4)
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#
+#     def test_filter(self):
+#         data = {'resource': 'group-resource-permissions', 'permission': 'create'}
+#         url = reverse('apiresourcepermissions-list')
+#         response = self.client.get(url, data, format='json')
+#         self.assertEqual(len(response.data), 4)
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#
+#     def test_retrieve(self):
+#         response = self.client.get(reverse('apiresourcepermissions-detail',
+#                                            args=['group-resource-permissions/create']))
+#         self.assertEqual(len(response.data), 4)
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#
+#     def test_create(self):
+#         url = reverse('apiresourcepermissions-list')
+#         data = {'group': 'group_test1', 'resource': 'group-resource-permissions',
+#                 'permission': 'create'}
+#         response = self.client.post(url, data, format='json')
+#         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+#
+#     def test_bulk_create(self):
+#         url = reverse('apiresourcepermissions-list')
+#         data = [{'group': 'group_test1', 'resource': 'group-resource-permissions',
+#                 'permission': 'create'},
+#                 {'group': 'group_test2', 'resource': 'group-resource-permissions',
+#                 'permission': 'create'}]
+#         response = self.client.post(url, data, format='json')
+#         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+#
+#     def test_delete(self):
+#         url = reverse('apiresourcepermissions-detail',
+#                       args=['group-resource-permissions/create'])
+#         args = {'group': 'group_change_group'}
+#         response = self.client.delete(url, args, format='json')
+#         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+#
+#     def test_bulk_delete(self):
+#         url = reverse('apiresourcepermissions-detail',
+#                       args=['group-resource-permissions/create'])
+#         args = [{'group': 'group_change_group'}, {'group': 'group_delete_group'}]
+#         response = self.client.delete(url, args, format='json')
+#         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

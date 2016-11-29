@@ -60,24 +60,6 @@ class ResourcePermissionSerializer(StrictSerializerMixin, serializers.ModelSeria
         fields = ('resource', 'permission')
 
 
-class ResourcePermissionReleatedField(serializers.RelatedField):
-    def to_representation(self, instance):
-        serializer = ResourcePermissionSerializer(instance)
-        return serializer.data
-
-    def to_internal_value(self, value):
-        missed_set = set(['resource', 'permission']) - set(value.keys())
-        if missed_set:
-            raise serializers.ValidationError("Missed fields %s." % str(missed_set))
-
-        try:
-            instance = ResourcePermission.objects.get(resource__name=value['resource'],
-                                                      permission__name=value['permission'])
-        except ResourcePermission.DoesNotExist:
-            raise serializers.ValidationError("Can't find corresponding resource permission.")
-        return instance
-
-
 class GroupResourcePermissionSerializer(StrictSerializerMixin, serializers.ModelSerializer):
     group = serializers.SlugRelatedField(slug_field='name', read_only=False, queryset=models.Group.objects.all())
     resource = serializers.CharField(source='resource_permission.resource.name')
@@ -111,3 +93,40 @@ class GroupResourcePermissionSerializer(StrictSerializerMixin, serializers.Model
     class Meta:
         model = GroupResourcePermission
         fields = ("id", 'resource', 'permission', 'group')
+
+
+class APIResourcePermissionSerializer(StrictSerializerMixin, serializers.ModelSerializer):
+    resource = serializers.CharField(source='resource.name')
+    permission = serializers.CharField(source='permission.name')
+
+    def _get_users_and_groups(self, resource_permission):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_list_or_404
+        from django.http import Http404
+        from . import models
+
+        members = dict()
+        try:
+            group_resource_permission_list = get_list_or_404(models.GroupResourcePermission,
+                                                             resource_permission=resource_permission)
+            groups_list = [str(obj.group.name) for obj in group_resource_permission_list]
+        except Http404:
+            users_set = set([])
+            groups_list = []
+        else:
+            users_set = {user.username for user in get_user_model().objects.filter(groups__name__in=groups_list)}
+        # get all users
+        superusers_set = {user.username for user in get_user_model().objects.filter(is_superuser=True)}
+        users_list = list(superusers_set.union(users_set))
+        members['groups'] = sorted(groups_list)
+        members['users'] = sorted(users_list)
+        return members
+
+    def to_representation(self, value):
+        members = self._get_users_and_groups(value)
+        return {'resource': value.resource.name, 'permission': value.permission.name,
+                'groups': members['groups'], 'users': members['users']}
+
+    class Meta:
+        model = ResourcePermission
+        fields = ('resource', 'permission')
