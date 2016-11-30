@@ -8,7 +8,6 @@ import inspect
 import json
 from collections import OrderedDict
 from django.shortcuts import render, redirect, get_list_or_404
-
 from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
                                  load_backend)
 from django.contrib.auth import logout as auth_logout
@@ -33,12 +32,9 @@ from pdc.apps.auth.models import ResourcePermission, ActionPermission, Resource
 from pdc.apps.auth.permissions import APIPermission
 from pdc.apps.common.viewsets import (StrictQueryParamMixin,
                                       ChangeSetUpdateModelMixin,
-                                      MultiLookupFieldMixin,
-                                      ChangeSetDestroyModelMixin,
-                                      ChangeSetCreateModelMixin
+                                      MultiLookupFieldMixin
                                       )
 from pdc.apps.common import viewsets as common_viewsets
-
 from pdc.apps.utils.SortedRouter import router, URL_ARG_RE
 from pdc.apps.utils.utils import (group_obj_export,
                                   convert_method_to_action,
@@ -147,19 +143,20 @@ def user_profile(request):
 
 
 def get_users_and_groups(resource_permission):
-    # get all groups
+    members = dict()
+    inactive_user = {user.username for user in models.User.objects.filter(is_active=False)}
+    superusers_set = {user.username for user in models.User.objects.filter(is_superuser=True)}
     try:
         group_resource_permission_list = get_list_or_404(models.GroupResourcePermission,
                                                          resource_permission=resource_permission)
         groups_list = [str(obj.group.name) for obj in group_resource_permission_list]
+        users_set = {user.username for user in get_user_model().objects.filter(groups__name__in=groups_list)}
+        users_list = list(superusers_set.union(users_set) - inactive_user)
     except Http404:
-        pass
-    # get all users
-    superusers_set = {user.username for user in models.User.objects.filter(is_superuser=True)}
-    users_set = {user.username for user in get_user_model().objects.filter(groups__name__in=groups_list)}
-    users_list = list(superusers_set.union(users_set))
-    groups = sorted(["@" + group_name for group_name in groups_list])
-    members = sorted(users_list + groups)
+        groups_list = []
+        users_list = list(superusers_set - inactive_user)
+    members['groups'] = groups_list
+    members['users'] = users_list
     return members
 
 
@@ -230,15 +227,21 @@ def get_api_perms(request):
     Return all API perms for @groups and users.
     Format: {resource: {create/read/update/delete: [users, @groups]}}
     """
-
     perms = {}
     ret = get_url_with_resource(request)
 
     for obj in models.ResourcePermission.objects.all():
         name = URL_ARG_RE.sub(r'{\1}', obj.resource.name)
+        if name not in ret:
+            continue
         url = ret[name]
-        members = get_users_and_groups(obj)
-        perms.setdefault(name, OrderedDict()).setdefault(obj.permission.name, set()).update(members)
+        if read_permission_for_all() and obj.permission.name == 'read':
+            members_list = ['@all']
+        else:
+            members = get_users_and_groups(obj)
+            groups = ["@" + group_name for group_name in members['groups']]
+            members_list = sorted(members['users'] + groups)
+        perms.setdefault(name, OrderedDict()).setdefault(obj.permission.name, set()).update(members_list)
         perms.setdefault(name, OrderedDict()).setdefault('url', url)
     # sort groups and users
     for resource in perms:
@@ -912,14 +915,15 @@ class GroupResourcePermissionViewSet(common_viewsets.PDCModelViewSet):
 
 
 class APIResourcePermissionViewSet(StrictQueryParamMixin,
-                                   ChangeSetCreateModelMixin,
-                                   ChangeSetDestroyModelMixin,
                                    mixins.RetrieveModelMixin,
                                    mixins.ListModelMixin,
                                    MultiLookupFieldMixin,
                                    viewsets.GenericViewSet):
     """
     This end-point provides API resource permissions.
+
+    For this API, which list all groups and users for the resource permissions.
+    If want to change the group's permission, please via $LINK:groupresourcepermissions-list$ API.
     """
     queryset = models.ResourcePermission.objects.all()
     serializer_class = serializers.APIResourcePermissionSerializer
@@ -948,14 +952,10 @@ class APIResourcePermissionViewSet(StrictQueryParamMixin,
              # paged lists
             {
                 "resource": string,
-                    {
-                        "permission": string,
-                            {
-                                "users": list,
-                                "groups" list
-                            }
-                             ...
-                    }
+                "permission": string,
+                "users": list,
+                "groups" list
+
                     ...
             }
 
