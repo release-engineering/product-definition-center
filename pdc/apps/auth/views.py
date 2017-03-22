@@ -6,7 +6,6 @@
 #
 import inspect
 import json
-
 from collections import OrderedDict
 from django.shortcuts import render, redirect, get_list_or_404
 from django.contrib.auth import (REDIRECT_FIELD_NAME, get_user_model,
@@ -31,7 +30,10 @@ from . import serializers
 from . import models
 from pdc.apps.auth.models import ResourcePermission, ActionPermission, Resource
 from pdc.apps.auth.permissions import APIPermission
-from pdc.apps.common.viewsets import StrictQueryParamMixin, ChangeSetUpdateModelMixin
+from pdc.apps.common.viewsets import (StrictQueryParamMixin,
+                                      ChangeSetUpdateModelMixin,
+                                      MultiLookupFieldMixin
+                                      )
 from pdc.apps.common import viewsets as common_viewsets
 from pdc.apps.utils.SortedRouter import router, URL_ARG_RE
 from pdc.apps.utils.utils import (group_obj_export,
@@ -908,3 +910,69 @@ class GroupResourcePermissionViewSet(common_viewsets.PDCModelViewSet):
         On success, HTTP status code is 204 and the response has no content.
         """
         return super(GroupResourcePermissionViewSet, self).destroy(request, *args, **kwargs)
+
+
+class APIResourcePermissionViewSet(StrictQueryParamMixin,
+                                   mixins.RetrieveModelMixin,
+                                   mixins.ListModelMixin,
+                                   MultiLookupFieldMixin,
+                                   viewsets.GenericViewSet):
+    """
+    This end-point provides API resource permissions.
+
+    For this API, which list all groups and users for the resource permissions.
+    If want to change the group's permission, please via $LINK:groupresourcepermissions-list$ API.
+    """
+    queryset = models.ResourcePermission.objects.all()
+    serializer_class = serializers.APIResourcePermissionSerializer
+    permission_classes = (APIPermission,)
+    lookup_fields = (
+        ('resource__name', r'[^/]+'),
+        ('permission__name', r'[^/]+'),
+    )
+    filter_class = filters.ResourcePermissionFilter
+
+    def list(self, request, *args, **kwargs):
+        """
+        Get information about API resource permissions.
+
+        __Method__: `GET`
+
+        __URL__: $LINK:apiresourcepermissions-list$
+
+        __Query params__:
+
+        * `resource` (string)
+        * `permission` (string)
+
+        __Response__:
+
+             # paged lists
+            {
+                "resource": string,
+                "permission": string,
+                "users": list,
+                "groups" list
+
+                    ...
+            }
+
+        """
+        return super(APIResourcePermissionViewSet, self).list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        __Method__: GET
+
+        __URL__: $LINK:apiresourcepermissions-detail:resource}/{permission$
+
+        __Response__:
+
+            {
+                "resource": string,
+                "permission": string
+                "users": list,
+                "groups": list,
+            }
+        """
+        return super(APIResourcePermissionViewSet, self).retrieve(request, *args, **kwargs)
