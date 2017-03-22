@@ -2121,3 +2121,86 @@ class ProductLastModifiedResponseTestCase(TestCaseWithChangeSetMixin, APITestCas
         response = self.client.get(reverse('product-list'))
         after_time = self._get_last_modified_epoch(response)
         self.assertGreaterEqual(after_time - before_time, 3)
+
+
+class ReleaseInteropFeatureCategoriesTestCase(TestCaseWithChangeSetMixin, APITestCase):
+    fixtures = [
+        "pdc/apps/release/fixtures/tests/interop_feature_categories.json"
+    ]
+
+    def test_list_release_interop_feature_categories(self):
+        response = self.client.get(reverse('releaseinteropfeaturecategories-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+
+    def test_retrieve_release_interop_feature_categories(self):
+        response = self.client.get(reverse("releaseinteropfeaturecategories-detail", args=["rhel1"]))
+        expect_result = {'name': u'rhel1', 'description': u'prepare for rhel os'}
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expect_result)
+
+    def test_create(self):
+        args = {'name': 'test', 'description': 'test_create'}
+        url = reverse("releaseinteropfeaturecategories-list")
+        response = self.client.post(url, args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNumChanges([1])
+
+    def test_create_without_name(self):
+        args = {'description': 'test_create'}
+        url = reverse("releaseinteropfeaturecategories-list")
+        response = self.client.post(url, args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_duplicate_name(self):
+        args = {'name': 'test', 'description': 'test_create'}
+        url = reverse("releaseinteropfeaturecategories-list")
+        response = self.client.post(url, args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        args = {'name': 'test', 'description': 'test'}
+        url = reverse("releaseinteropfeaturecategories-list")
+        response = self.client.post(url, args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_create_with_error_key(self):
+        args = {'Error_key': 'test', 'name': 'test', 'description': 'test_create'}
+        url = reverse("releaseinteropfeaturecategories-list")
+        response = self.client.post(url, args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_bulk_create(self):
+        args1 = {'name': 'test_bulk1', 'description': 'test1'}
+        args2 = {'name': 'test_bulk2', 'description': 'test2'}
+        args = [args1, args2]
+        url = reverse("releaseinteropfeaturecategories-list")
+        response = self.client.post(url, args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNumChanges([2])
+
+    def test_update(self):
+        args = {'name': 'test_update', 'description': 'test'}
+        response = self.client.put(reverse("releaseinteropfeaturecategories-detail", args=['rhel1']),
+                                   args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNumChanges([1])
+
+    def test_bulk_update(self):
+        args1 = {'name': 'test_update1', 'description': 'test1'}
+        args2 = {'name': 'test_update2', 'description': 'test2'}
+        data = {'rhel1': args1, 'rhel2': args2}
+        response = self.client.put(reverse("releaseinteropfeaturecategories-list"), data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNumChanges([2])
+
+    def test_delete(self):
+        response = self.client.delete(reverse('releaseinteropfeaturecategories-detail', args=['rhel1']))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(models.ReleaseInteropFeatureCategories.objects.count(), 1)
+        self.assertNumChanges([1])
+
+    def test_bulk_delete(self):
+        response = self.client.delete(reverse('releaseinteropfeaturecategories-list'),
+                                      ['rhel1', 'rhel2'], format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(models.ReleaseInteropFeatureCategories.objects.count(), 0)
+        self.assertNumChanges([2])

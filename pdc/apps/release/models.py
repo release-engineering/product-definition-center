@@ -408,3 +408,20 @@ class ReleaseGroup(models.Model):
         if 'type' in _fields:
             result['type'] = self.type.name
         return result
+
+
+class ReleaseInteropFeatureCategories(models.Model):
+    name = models.CharField(max_length=255, blank=False, unique=True)
+    description = models.CharField(max_length=255)
+
+    class Meta:
+        ordering = ("name", )
+
+    def __unicode__(self):
+        return u"%s" % self.name
+
+    def export(self):
+        return {
+            "name": self.name,
+            "description": self.description
+        }

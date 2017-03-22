@@ -6,7 +6,8 @@
 import django_filters
 
 from pdc.apps.common import filters
-from .models import Release, ProductVersion, Product, ReleaseType, Variant, BaseProduct, ReleaseGroup
+from .models import (Release, ProductVersion, Product, ReleaseType, Variant, BaseProduct,
+                     ReleaseGroup, ReleaseInteropFeatureCategories)
 
 
 class ActiveReleasesFilter(filters.CaseInsensitiveBooleanFilter):
@@ -120,3 +121,12 @@ class ReleaseGroupFilter(django_filters.FilterSet):
     class Meta:
         model = ReleaseGroup
         fields = ('name', 'description', 'type', 'releases', 'active')
+
+
+class ReleaseInteropFeatureCategoriesFilter(django_filters.FilterSet):
+    name            = filters.MultiIntFilter(name='name')
+    description    = filters.MultiValueFilter(name='description')
+
+    class Meta:
+        model = ReleaseInteropFeatureCategories
+        fields = ('name', 'description')

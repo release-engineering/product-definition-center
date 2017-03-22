@@ -21,7 +21,8 @@ from .models import ProductVersion, Release, BaseProduct, Variant, Product
 from .serializers import (ProductSerializer, ProductVersionSerializer,
                           ReleaseSerializer, BaseProductSerializer,
                           ReleaseTypeSerializer, ReleaseVariantSerializer,
-                          VariantTypeSerializer, ReleaseGroupSerializer)
+                          VariantTypeSerializer, ReleaseGroupSerializer,
+                          ReleaseInteropFeatureCategoriesSerializer)
 from pdc.apps.compose import models as compose_models
 from pdc.apps.repository import models as repo_models
 from pdc.apps.common.constants import PUT_OPTIONAL_PARAM_WARNING
@@ -1137,3 +1138,90 @@ class ReleaseGroupsViewSet(ChangeSetModelMixin,
         On success, HTTP status code is 204 and the response has no content.
         """
         return super(ReleaseGroupsViewSet, self).destroy(*args, **kwargs)
+
+
+class ReleaseInteropFeatureCategoriesViewSet(ChangeSetModelMixin,
+                                             StrictQueryParamMixin,
+                                             viewsets.GenericViewSet):
+    """
+    API endpoint that allows release-interop-feature-categories to be viewed or edited.
+    """
+
+    queryset = models.ReleaseInteropFeatureCategories.objects.all()
+    serializer_class = ReleaseInteropFeatureCategoriesSerializer
+    lookup_field = 'name'
+    lookup_value_regex = '[^/]+'
+    filter_class = filters.ReleaseInteropFeatureCategoriesFilter
+
+    def create(self, request, *args, **kwargs):
+        """
+        __Method__: POST
+
+        __URL__: $LINK:releaseinteropfeaturecategories-list$
+
+        __Data__:
+
+        %(WRITABLE_SERIALIZER)s
+
+        __Response__:
+
+        %(SERIALIZER)s
+        """
+
+        return super(ReleaseInteropFeatureCategoriesViewSet, self).create(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        __Method__: GET
+
+        __URL__: $LINK:releaseinteropfeaturecategories-detail:name$
+
+        __Response__:
+
+        %(SERIALIZER)s
+        """
+        return super(ReleaseInteropFeatureCategoriesViewSet, self).retrieve(request, *args, **kwargs)
+
+    def list(self, *args, **kwargs):
+        """
+        __Method__: GET
+
+        __URL__: $LINK:releaseinteropfeaturecategories-list$
+
+        __Query params__:
+
+        %(FILTERS)s
+
+        __Response__: a paged list of following objects
+
+        %(SERIALIZER)s
+        """
+        return super(ReleaseInteropFeatureCategoriesViewSet, self).list(*args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """
+        __Method__: PUT, PATCH
+
+        __URL__: $LINK:releaseinteropfeaturecategories-detail:name$
+
+        __Data__:
+
+        %(WRITABLE_SERIALIZER)s
+
+        __Response__:
+
+        %(SERIALIZER)s
+        """
+        return super(ReleaseInteropFeatureCategoriesViewSet, self).update(request, *args, **kwargs)
+
+    def destroy(self, *args, **kwargs):
+        """
+        __Method__: `DELETE`
+
+        __URL__: $LINK:releaseinteropfeaturecategories-detail:name$
+
+        __Response__:
+
+        On success, HTTP status code is 204 and the response has no content.
+        """
+        return super(ReleaseInteropFeatureCategoriesViewSet, self).destroy(*args, **kwargs)
