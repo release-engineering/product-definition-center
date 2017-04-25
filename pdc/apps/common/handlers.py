@@ -57,6 +57,8 @@ def exception_handler(exc, context):
         elif isinstance(exc, db.DatabaseError):
             # Refs PEP249
             # Other DB errors, such as incorrect grammar, transaction error etc.
+            logger = logging.getLogger(__name__)
+            logger.error('DatabaseError', exc_info=sys.exc_info())
             return Response({'detail': 'The database encountered an internal '
                                        'error or misconfiguration and was '
                                        'unable to complete your request.'},
