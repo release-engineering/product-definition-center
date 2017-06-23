@@ -4,6 +4,7 @@
 # http://opensource.org/licenses/MIT
 #
 import datetime
+import time
 import re
 import json
 
@@ -21,6 +22,16 @@ from rest_framework.response import Response
 from pdc.apps.auth.permissions import APIPermission
 from pdc.apps.utils.utils import generate_warning_header_dict, get_model_name_from_obj_or_cls
 from pdc.apps.changeset.models import Change
+
+
+class DatetimeAwareJSONEncoder(json.encoder.JSONEncoder):
+    """ A JSON encoder that converts datetimes to timestamps """
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return time.mktime(obj.timetuple())
+        return super(encoder, self).default(obj)
+
+encoder = DatetimeAwareJSONEncoder()
 
 
 class NoSetattrInPreSaveMixin(object):
@@ -47,7 +58,7 @@ class ChangeSetCreateModelMixin(mixins.CreateModelMixin):
             self.request.changeset.add(model_name,
                                        item.id,
                                        'null',
-                                       json.dumps(item.export()))
+                                       encoder.encode(item.export()))
 
 
 class NoEmptyPatchMixin(object):
@@ -103,8 +114,8 @@ class ChangeSetUpdateModelMixin(NoSetattrInPreSaveMixin,
         model_name = get_model_name_from_obj_or_cls(obj)
         self.request.changeset.add(model_name,
                                    obj.id,
-                                   json.dumps(self.origin_obj),
-                                   json.dumps(obj.export()))
+                                   encoder.encode(self.origin_obj),
+                                   encoder.encode(obj.export()))
         del self.origin_obj
 
 
@@ -115,7 +126,7 @@ class ChangeSetDestroyModelMixin(mixins.DestroyModelMixin):
     def perform_destroy(self, obj):
         model_name = get_model_name_from_obj_or_cls(obj)
         obj_id = obj.id
-        obj_content = json.dumps(obj.export())
+        obj_content = encoder.encode(obj.export())
         super(ChangeSetDestroyModelMixin, self).perform_destroy(obj)
         self.request.changeset.add(model_name,
                                    obj_id,
