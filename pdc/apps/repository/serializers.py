@@ -9,6 +9,8 @@ from rest_framework import serializers
 from . import models
 from pdc.apps.common.fields import ChoiceSlugField
 from pdc.apps.common.serializers import StrictSerializerMixin
+from pdc.apps.component.models import GlobalComponent
+from pdc.apps.contact.models import Person
 from pdc.apps.release import models as release_models
 
 
@@ -109,3 +111,28 @@ class PushTargetSerializer(StrictSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = models.PushTarget
         fields = ('id', 'name', 'description', 'service', 'host')
+
+
+class MultiDestinationSerializer(StrictSerializerMixin, serializers.ModelSerializer):
+    global_component = ChoiceSlugField(slug_field='name', queryset=GlobalComponent.objects.all())
+    origin_repo_id = serializers.PrimaryKeyRelatedField(
+        source='origin_repo', write_only=True, queryset=models.Repo.objects.all())
+    destination_repo_id = serializers.PrimaryKeyRelatedField(
+        source='destination_repo', write_only=True, queryset=models.Repo.objects.all())
+    origin_repo = RepoSerializer(read_only=True)
+    destination_repo = RepoSerializer(read_only=True)
+    subscribers = ChoiceSlugField(slug_field='username', many=True, queryset=Person.objects.filter(active=True))
+    active = serializers.BooleanField(default=True)
+
+    class Meta:
+        model = models.MultiDestination
+        fields = (
+            'id',
+            'global_component',
+            'origin_repo_id',
+            'destination_repo_id',
+            'origin_repo',
+            'destination_repo',
+            'subscribers',
+            'active',
+        )

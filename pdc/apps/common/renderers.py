@@ -345,6 +345,10 @@ def describe_serializer(serializer, include_read_only):
                 notes.append('read-only')
                 if not include_read_only:
                     continue
+            elif field.write_only:
+                notes.append('write-only')
+                if include_read_only:
+                    continue
             elif not field.required:
                 notes.append('optional')
                 default = json.dumps(get_default_value(serializer, field_name, field))

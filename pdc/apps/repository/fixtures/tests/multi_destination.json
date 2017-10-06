@@ -1,0 +1,116 @@
+[
+    {
+        "pk": 1,
+        "model": "repository.Repo",
+        "fields": {
+            "variant_arch": 1,
+            "service": 1,
+            "repo_family": 1,
+            "content_format": 1,
+            "content_category": 1,
+            "name": "test_repo",
+            "product_id": 22
+        }
+    },
+    {
+        "pk": 2,
+        "model": "repository.Repo",
+        "fields": {
+            "variant_arch": 1,
+            "service": 1,
+            "repo_family": 1,
+            "content_format": 1,
+            "content_category": 1,
+            "name": "test_repo",
+            "product_id": 22,
+            "shadow": true
+        }
+    },
+
+    {
+        "pk": 1,
+        "model": "contact.Person",
+        "fields": {
+            "username": "person1",
+            "email": "person1@example.com"
+        }
+    },
+    {
+        "pk": 2,
+        "model": "contact.Person",
+        "fields": {
+            "username": "person2",
+            "email": "person2@example.com"
+        }
+    },
+    {
+        "pk": 3,
+        "model": "contact.Person",
+        "fields": {
+            "username": "person3",
+            "email": "person3@example.com"
+        }
+    },
+    {
+        "pk": 1,
+        "model": "contact.Contact",
+        "fields": {
+            "active": true,
+            "content_type": [
+                "contact",
+                "person"
+            ]
+        }
+    },
+    {
+        "pk": 2,
+        "model": "contact.Contact",
+        "fields": {
+            "active": true,
+            "content_type": [
+                "contact",
+                "person"
+            ]
+        }
+    },
+    {
+        "pk": 3,
+        "model": "contact.Contact",
+        "fields": {
+            "active": false,
+            "content_type": [
+                "contact",
+                "person"
+            ]
+        }
+    },
+
+    {
+        "pk": 1,
+        "model": "component.GlobalComponent",
+        "fields": {
+            "name": "python"
+        }
+    },
+    {
+        "pk": 2,
+        "model": "component.GlobalComponent",
+        "fields": {
+            "name": "ruby"
+        }
+    },
+
+    {
+        "pk": 1,
+        "model": "repository.MultiDestination",
+        "fields": {
+            "global_component": 2,
+            "origin_repo_id": 1,
+            "destination_repo_id": 2,
+            "subscribers": [
+                1,
+                2
+            ]
+        }
+    }
+]
