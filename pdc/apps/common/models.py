@@ -42,7 +42,7 @@ class Arch(models.Model):
 
 class SigKey(models.Model):
     key_id              = models.CharField(max_length=20, unique=True, validators=[validate_sigkey])
-    name                = models.CharField(max_length=50, blank=True, null=True, unique=True)
+    name                = models.CharField(max_length=50, null=False, unique=True)
     description         = models.CharField(max_length=100, blank=True)
 
     def __unicode__(self):
@@ -51,9 +51,11 @@ class SigKey(models.Model):
     CACHE = {}
 
     @classmethod
-    def get_cached_id(cls, value, create=False):
-        """cached `key_id` to `id`"""
-        return get_cached_id(cls, "key_id", value, create=create)
+    def get_cached_id(cls, value):
+        """cached `key_id` to `id`
+           here the sigkey should set in db first
+        """
+        return get_cached_id(cls, "key_id", value)
 
     def export(self):
         return {

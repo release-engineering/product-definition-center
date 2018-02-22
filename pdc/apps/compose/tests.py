@@ -20,6 +20,7 @@ from pdc.apps.common.constants import PDC_WARNING_HEADER_NAME
 from pdc.apps.release.models import Release, ProductVersion
 from pdc.apps.component.models import (ReleaseComponent,
                                        BugzillaComponent)
+from pdc.apps.common.models import SigKey
 import pdc.apps.release.models as release_models
 import pdc.apps.common.models as common_models
 from . import models
@@ -1036,6 +1037,7 @@ class ComposeRPMViewAPITestCase(TestCaseWithChangeSetMixin, APITestCase):
     ]
 
     def setUp(self):
+        SigKey.objects.bulk_create([SigKey(key_id="abcdef00", name="A", description="icontains_A")])
         with open('pdc/apps/release/fixtures/tests/composeinfo-0.3.json', 'r') as f:
             self.compose_info = json.loads(f.read())
         with open('pdc/apps/compose/fixtures/tests/rpms-1.0.json', 'r') as f:
@@ -1208,6 +1210,7 @@ class ComposeFullImportViewAPITestCase(TestCaseWithChangeSetMixin, APITestCase):
     ]
 
     def setUp(self):
+        SigKey.objects.bulk_create([SigKey(key_id="abcdef00", name="A", description="icontains_A")])
         with open('pdc/apps/release/fixtures/tests/composeinfo-0.3.json', 'r') as f:
             self.compose_info = json.loads(f.read())
         with open('pdc/apps/compose/fixtures/tests/rpms-1.0.json', 'r') as f:

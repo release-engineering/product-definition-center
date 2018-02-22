@@ -197,7 +197,7 @@ def compose__import_rpms(request, release_id, composeinfo, rpm_manifest):
                     imported_rpms += 1
                     path, filename = os.path.split(rpm_data['path'])
                     rpm_id = get_or_insert_rpm(rpms_in_db, cursor, rpm_nevra, srpm_nevra, filename)
-                    sigkey_id = common_models.SigKey.get_cached_id(rpm_data["sigkey"], create=True)
+                    sigkey_id = common_models.SigKey.get_cached_id(rpm_data["sigkey"])
                     path_id = models.Path.get_cached_id(path, create=True)
                     content_category = rpm_data["category"]
                     content_category_id = repository_models.ContentCategory.get_cached_id(content_category)

@@ -406,9 +406,9 @@ class SigKeyRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.data['name'], 'TEST')
         self.assertEqual(response.data['description'], '')
         response = self.client.put(url, format='json',
-                                   data={'key_id': '1234adbf', 'description': "TEST"})
+                                   data={'key_id': '1234adbf', 'name': 'Testabc', 'description': "TEST"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], None)
+        self.assertEqual(response.data['name'], 'Testabc')
         self.assertEqual(response.data['description'], 'TEST')
         self.assertNumChanges([1, 1])
 
@@ -424,6 +424,13 @@ class SigKeyRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertDictEqual(dict(response.data), data)
         self.assertNumChanges([1])
+
+    def test_create_sigkey_with_no_name(self):
+        url = reverse('sigkey-list')
+        data = {"key_id": "abcd1234", "name": "", "description": "test"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"name": ["This field may not be blank."]})
 
 
 class CachedByArgumentClassTestCase(TestCase):

@@ -29,7 +29,7 @@ class ArchSerializer(StrictSerializerMixin, serializers.ModelSerializer):
 
 class SigKeySerializer(StrictSerializerMixin,
                        serializers.HyperlinkedModelSerializer):
-    name        = serializers.CharField(default=None)
+    name        = serializers.CharField(allow_null=False)
     description = serializers.CharField(required=False, default="")
 
     class Meta:
