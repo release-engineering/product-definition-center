@@ -238,14 +238,13 @@ class ProductUpdateTestCase(TestCaseWithChangeSetMixin, APITestCase):
         response = self.client.patch(url, format='json', data={})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_update_only_short(self):
+    def test_update_only_short_should_fail(self):
         response = self.client.patch(reverse('product-detail', args=['product']),
                                      {'short': 'tcudorp'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertNumChanges([1])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'short': 'Immutable field cannot be updated'})
+        self.assertNumChanges([])
         response = self.client.get(reverse('product-detail', args=['product']))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        response = self.client.get(reverse('product-detail', args=['tcudorp']))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_patch_read_only_field(self):
@@ -2317,20 +2316,37 @@ class ReleaseGroupRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertNumChanges([2])
 
     def test_update(self):
-        args = {'type': 'QuarterlyUpdate', 'name': 'test_update', 'description': 'good',
+        args = {'type': 'QuarterlyUpdate', 'name': 'rhel_test', 'description': 'good',
                 'releases': [u'release-1.0']}
         response = self.client.put(reverse("releasegroups-detail", args=['rhel_test']),
                                    args, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNumChanges([1])
 
+    def test_update_name_fails(self):
+        args = {'type': 'QuarterlyUpdate', 'name': 'test_update', 'description': 'good',
+                'releases': [u'release-1.0']}
+        response = self.client.put(reverse("releasegroups-detail", args=['rhel_test']),
+                                   args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNumChanges([])
+
     def test_bulk_update(self):
-        args1 = {'type': 'Zstream', 'name': 'test_update1', 'description': 'test1'}
-        args2 = {'type': 'Zstream', 'name': 'test_update2', 'description': 'test2'}
+        args1 = {'type': 'Zstream', 'name': 'rhel_test', 'description': 'test1'}
+        args2 = {'type': 'Zstream', 'name': 'rhel_test1', 'description': 'test2'}
         data = {'rhel_test': args1, 'rhel_test1': args2}
         response = self.client.put(reverse("releasegroups-list"), data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNumChanges([2])
+
+    def test_bulk_update_name_fails(self):
+        args1 = {'type': 'Zstream', 'name': 'test_update1', 'description': 'test1'}
+        args2 = {'type': 'Zstream', 'name': 'test_update2', 'description': 'test2'}
+        data = {'rhel_test': args1, 'rhel_test1': args2}
+        response = self.client.put(reverse("releasegroups-list"), data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('detail'), {'name': 'Immutable field cannot be updated'})
+        self.assertNumChanges([])
 
     def test_update_without_type(self):
         self.test_create()

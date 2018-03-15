@@ -368,16 +368,14 @@ class SigKeyRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'TEST')
 
-    def test_can_update_key_id(self):
+    def test_update_key_id_fails(self):
         response = self.client.patch(reverse('sigkey-detail', args=['1234adbf']),
                                      {'key_id': 'cafebabe'},
                                      format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('key_id'), 'cafebabe')
-        self.assertNumChanges([1])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'key_id': 'Immutable field cannot be updated'})
+        self.assertNumChanges([])
         response = self.client.get(reverse('sigkey-detail', args=['1234adbf']))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        response = self.client.get(reverse('sigkey-detail', args=['cafebabe']))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_can_bulk_update(self):

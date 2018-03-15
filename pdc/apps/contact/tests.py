@@ -70,14 +70,14 @@ class ContactRoleRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('results')[0].get('name'), 'qe_ack')
 
-    def test_update(self):
+    def test_update_name_fails(self):
         url = reverse('contactrole-detail', args=['qe_ack'])
         data = {'name': 'new_role'}
         response = self.client.put(url, data, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('name'), 'new_role')
-        self.assertNumChanges([1])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'name': 'Immutable field cannot be updated'})
+        self.assertNumChanges([])
 
     def test_delete(self):
         url = reverse('contactrole-detail', args=['qe_ack'])
@@ -126,7 +126,7 @@ class ContactRoleRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
 
     def test_update_missing_optional_fields_are_erased(self):
         response = self.client.put(reverse('contactrole-detail', args=['allow_3_role']),
-                                   {'name': 'new_name'}, format='json')
+                                   {'name': 'allow_3_role'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_limit'], 1)
         self.assertNumChanges([1])

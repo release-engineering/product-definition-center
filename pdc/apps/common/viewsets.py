@@ -198,6 +198,27 @@ class ChangeSetUpdateModelMixin(NoSetattrInPreSaveMixin,
                                    _dumps_json(obj.export()))
         del self.origin_obj
 
+    def update(self, request, *args, **kwargs):
+        lookup_fields = getattr(self, 'lookup_fields', [])
+        if not lookup_fields:
+            lookup_field = getattr(self, 'lookup_field', None)
+            if lookup_field is not None:
+                lookup_fields = [lookup_field]
+
+        for lookup_field in lookup_fields:
+            if lookup_field in request.data:
+                obj = super(ChangeSetUpdateModelMixin, self).get_object()
+                serializer_class = self.get_serializer_class()
+                serializer = serializer_class(instance=obj, context={'request': self.request})
+                old_value = serializer.data[lookup_field]
+                new_value = request.data[lookup_field]
+                if old_value != new_value:
+                    return Response(
+                        {lookup_field: 'Immutable field cannot be updated'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+        return super(ChangeSetUpdateModelMixin, self).update(request, *args, **kwargs)
+
 
 class ChangeSetDestroyModelMixin(mixins.DestroyModelMixin):
     """
