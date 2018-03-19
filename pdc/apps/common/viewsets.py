@@ -367,10 +367,16 @@ class MultiLookupFieldMixin(object):
 
     def get_object(self):
         queryset = self.get_queryset()
-        self._populate_kwargs()
         filters = {}
-        for field_name, _ in self.lookup_fields:
-            filters[field_name] = self.kwargs[field_name]
+        if self.kwargs.get('pk'):
+            # Primary key was specified instead of the composite field. We need
+            # to filter based on that.
+            filters = {'pk': self.kwargs['pk']}
+        else:
+            # Extract all fields from the composite value and set up filters.
+            self._populate_kwargs()
+            for field_name, _ in self.lookup_fields:
+                filters[field_name] = self.kwargs[field_name]
         obj = get_object_or_404(queryset, **filters)
         self.check_object_permissions(self.request, obj)
         return obj
