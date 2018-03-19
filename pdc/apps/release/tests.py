@@ -126,7 +126,7 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         args = {"name": "Fedora", "short": "f"}
         response = self.client.post(reverse('product-list'), args)
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        args.update({'active': False, 'product_versions': [], 'allowed_push_targets': []})
+        args.update({'active': False, 'product_versions': [], 'allowed_push_targets': [], "id": 3})
         self.assertEqual(args, response.data)
         self.assertNumChanges([1])
 
@@ -160,7 +160,15 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(dict(response.data),
                          {"short": "product", "name": "Test Product",
                           "product_versions": [], "active": False,
-                          "allowed_push_targets": []})
+                          "allowed_push_targets": [], 'id': 1})
+
+    def test_get_by_id(self):
+        response = self.client.get(reverse('product-detail', args=[1]))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(dict(response.data),
+                         {"short": "product", "name": "Test Product",
+                          "product_versions": [], "active": False,
+                          "allowed_push_targets": [], 'id': 1})
 
     def test_all(self):
         response = self.client.get(reverse('product-list'))
@@ -172,12 +180,16 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
              'short': u'dummy',
              'active': False,
              'allowed_push_targets': [],
-             'product_versions': []},
+             'product_versions': [],
+             'id': 2,
+             },
             {'name': u'Test Product',
              'short': u'product',
              'active': False,
              'allowed_push_targets': [],
-             'product_versions': []},
+             'product_versions': [],
+             'id': 1,
+             },
         ]
         self.assertEqual(sorted(data), sorted(expected))
 
@@ -189,7 +201,8 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
                                          "name": "Fedora",
                                          "active": False,
                                          "product_versions": [],
-                                         "allowed_push_targets": []})
+                                         "allowed_push_targets": [],
+                                         "id": 3})
 
     def test_query_with_illegal_active(self):
         response = self.client.get(reverse('product-list'), {"active": "abcd"})

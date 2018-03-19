@@ -33,7 +33,8 @@ from pdc.apps.common.viewsets import (ChangeSetModelMixin,
                                       StrictQueryParamMixin,
                                       ConditionalProcessingMixin,
                                       PDCModelViewSet,
-                                      NotificationMixin)
+                                      NotificationMixin,
+                                      NumericIDMixin)
 from pdc.apps.auth.permissions import APIPermission
 from . import lib
 
@@ -120,6 +121,7 @@ class ProductViewSet(NotificationMixin,
                      StrictQueryParamMixin,
                      mixins.RetrieveModelMixin,
                      mixins.ListModelMixin,
+                     NumericIDMixin,
                      viewsets.GenericViewSet):
     """
     API endpoint that allows products to be viewed or edited.
