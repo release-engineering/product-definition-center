@@ -374,3 +374,20 @@ class MultiLookupFieldMixin(object):
         obj = get_object_or_404(queryset, **filters)
         self.check_object_permissions(self.request, obj)
         return obj
+
+
+class NumericIDMixin(object):
+    """
+    A mixin that allows retrieving objects based on database primary key or a
+    human readable identifier.
+
+    This mixin MUST be listed after all other mixins using `get_object` in the
+    inheritance chain, since for some inputs it will not continue the call.
+    Safest option is to list it just before `GenericViewSet`.
+    """
+    def get_object(self):
+        try:
+            pk = int(self.kwargs[self.lookup_field])
+        except ValueError:
+            return super(NumericIDMixin, self).get_object()
+        return self.get_queryset().get(pk=pk)
