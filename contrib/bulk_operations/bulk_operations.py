@@ -191,7 +191,7 @@ class BulkRouter(routers.DefaultRouter):
         """
         For viewsets using the MultiLookupFieldMixin, it is necessary to
         construct the lookup_value_regex attribute here so that it allows using
-        either the composite value or databse primary key.
+        either the composite value or database primary key.
         """
         if hasattr(viewset, 'lookup_fields'):
             regexes = []
@@ -199,7 +199,7 @@ class BulkRouter(routers.DefaultRouter):
                 regexes.append('(?P<%s>%s)' % (field_name, field_regex))
             composite_regex = '/'.join(regexes)
             # The URL can contain either a composite_field (which is in fact
-            # multiple fields separated with slashes, or just the primary key.
+            # multiple fields separated with slashes), or just the primary key.
             viewset.lookup_value_regex = r'(?P<pk>\d+)|%s' % composite_regex
 
         return super(BulkRouter, self).get_lookup_regex(viewset, lookup_prefix)
