@@ -181,14 +181,14 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
              'active': False,
              'allowed_push_targets': [],
              'product_versions': [],
-             'id': 2,
+             'pk': 2,
              },
             {'name': u'Test Product',
              'short': u'product',
              'active': False,
              'allowed_push_targets': [],
              'product_versions': [],
-             'id': 1,
+             'pk': 1,
              },
         ]
         self.assertEqual(sorted(data), sorted(expected))

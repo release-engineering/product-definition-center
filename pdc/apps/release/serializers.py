@@ -64,7 +64,7 @@ class ProductSerializer(StrictSerializerMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('name', 'short', 'active', 'product_versions', 'allowed_push_targets', 'id')
+        fields = ('name', 'short', 'active', 'product_versions', 'allowed_push_targets', 'pk')
 
 
 class ProductVersionSerializer(StrictSerializerMixin, serializers.ModelSerializer):
