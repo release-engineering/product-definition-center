@@ -126,7 +126,7 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         args = {"name": "Fedora", "short": "f"}
         response = self.client.post(reverse('product-list'), args)
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        args.update({'active': False, 'product_versions': [], 'allowed_push_targets': [], "pk": 3})
+        args.update({'active': False, 'product_versions': [], 'allowed_push_targets': [], 'pk': 3})
         self.assertEqual(args, response.data)
         self.assertNumChanges([1])
 
@@ -160,7 +160,7 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(dict(response.data),
                          {"short": "product", "name": "Test Product",
                           "product_versions": [], "active": False,
-                          "allowed_push_targets": [], 'pk': 1})
+                          "allowed_push_targets": [], "pk": 1})
 
     def test_get_by_pk(self):
         response = self.client.get(reverse('product-detail', args=[1]))
@@ -168,7 +168,7 @@ class ProductRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         self.assertEqual(dict(response.data),
                          {"short": "product", "name": "Test Product",
                           "product_versions": [], "active": False,
-                          "allowed_push_targets": [], 'pk': 1})
+                          "allowed_push_targets": [], "pk": 1})
 
     def test_all(self):
         response = self.client.get(reverse('product-list'))
