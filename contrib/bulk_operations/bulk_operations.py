@@ -200,6 +200,6 @@ class BulkRouter(routers.DefaultRouter):
             composite_regex = '/'.join(regexes)
             # The URL can contain either a composite_field (which is in fact
             # multiple fields separated with slashes), or just the primary key.
-            viewset.lookup_value_regex = r'(?P<pk>\d+)|%s' % composite_regex
+            viewset.lookup_value_regex = r'\d+|%s' % (composite_regex, )
 
         return super(BulkRouter, self).get_lookup_regex(viewset, lookup_prefix)
