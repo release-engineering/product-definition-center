@@ -1687,6 +1687,7 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             'variant_version': None,
             'variant_release': None,
             'allowed_push_targets': [],
+            'pk': 4,
         })
         self.assertEqual(response.data, expected)
         self.assertNumChanges([1])
@@ -1813,6 +1814,27 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
                                    args, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertItemsEqual(response.data.pop('arches'), args.pop('arches'))
+        self.assertEqual(response.data.pop('pk'), 1)
+        self.assertDictEqual(dict(response.data), args)
+        self.assertNumChanges([1])
+
+    def test_update_by_pk(self):
+        args = {
+            'uid': u'Workstation-UID',
+            'id': u'Workstation',
+            'release': u'release-1.0',
+            'name': u'Workstation variant',
+            'type': u'variant',
+            'arches': ['ppc64', 'x86_64'],
+            'variant_version': None,
+            'variant_release': None,
+            'allowed_push_targets': [],
+        }
+        response = self.client.put(reverse('variant-detail', args=[1]),
+                                   args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertItemsEqual(response.data.pop('arches'), args.pop('arches'))
+        self.assertEqual(response.data.pop('pk'), 1)
         self.assertDictEqual(dict(response.data), args)
         self.assertNumChanges([1])
 
@@ -1848,6 +1870,16 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             'name': 'Workstation variant',
         }
         response = self.client.patch(reverse('variant-detail', args=['release-1.0/Server-UID']),
+                                     args, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], args['name'])
+        self.assertNumChanges([1])
+
+    def test_patch_by_pk(self):
+        args = {
+            'name': 'Workstation variant',
+        }
+        response = self.client.patch(reverse('variant-detail', args=[1]),
                                      args, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], args['name'])
@@ -1936,6 +1968,7 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
             'variant_version': None,
             'variant_release': None,
             'allowed_push_targets': [],
+            'pk': 1,
         }
         self.assertItemsEqual(response.data.pop('arches'), ['x86_64', 'ppc64'])
         self.assertDictEqual(dict(response.data), expected)
@@ -1948,9 +1981,17 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
         # It is impossible to construct following URL directly by reverse
         response = self.client.get(reverse('variant-list') + 'abc-def')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.get(reverse('variant-detail', args=[15]))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete(self):
         response = self.client.delete(reverse('variant-detail', args=['release-1.0/Server-UID']))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(models.Variant.objects.count(), 2)
+        self.assertNumChanges([1])
+
+    def test_delete_by_pk(self):
+        response = self.client.delete(reverse('variant-detail', args=[1]))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(models.Variant.objects.count(), 2)
         self.assertNumChanges([1])
@@ -1964,6 +2005,13 @@ class VariantRESTTestCase(TestCaseWithChangeSetMixin, APITestCase):
     def test_bulk_delete(self):
         response = self.client.delete(reverse('variant-list'),
                                       ['release-1.0/Client-UID', 'release-1.0/Server-UID'],
+                                      format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(models.Variant.objects.count(), 1)
+        self.assertNumChanges([2])
+
+    def test_bulk_delete_by_pk(self):
+        response = self.client.delete(reverse('variant-list'), [2, 1],
                                       format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(models.Variant.objects.count(), 1)
