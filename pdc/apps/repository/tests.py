@@ -699,7 +699,7 @@ class VariantUpdateTestCase(APITestCase):
                              {'release': 'release-1.0', 'name': 'Server name', 'type': 'variant',
                               'id': 'Server', 'uid': 'Server-UID', 'arches': ['ppc64', 'x86_64'],
                               'variant_version': None, 'variant_release': None,
-                              'allowed_push_targets': []})
+                              'allowed_push_targets': [], 'pk': 1})
 
     def test_removing_arch_with_repos_fails(self):
         response = self.client.patch(reverse('variant-detail', args=['release-1.0/Server-UID']),
@@ -711,7 +711,7 @@ class VariantUpdateTestCase(APITestCase):
                              {'release': 'release-1.0', 'name': 'Server name', 'type': 'variant',
                               'id': 'Server', 'uid': 'Server-UID', 'arches': ['ppc64', 'x86_64'],
                               'variant_version': None, 'variant_release': None,
-                              'allowed_push_targets': []})
+                              'allowed_push_targets': [], 'pk': 1})
 
     def test_adding_another_variant_succeeds(self):
         response = self.client.patch(reverse('variant-detail', args=['release-1.0/Server-UID']),
@@ -723,7 +723,7 @@ class VariantUpdateTestCase(APITestCase):
                              {'release': 'release-1.0', 'name': 'Server name', 'type': 'variant',
                               'id': 'Server', 'uid': 'Server-UID', 'arches': ['ia64', 'ppc64', 'x86_64'],
                               'variant_version': None, 'variant_release': None,
-                              'allowed_push_targets': []})
+                              'allowed_push_targets': [], 'pk': 1})
 
     def test_removing_non_relevant_variant_succeeds(self):
         response = self.client.patch(reverse('variant-detail', args=['release-1.0/Server-UID']),
@@ -735,7 +735,7 @@ class VariantUpdateTestCase(APITestCase):
                              {'release': 'release-1.0', 'name': 'Server name', 'type': 'variant',
                               'id': 'Server', 'uid': 'Server-UID', 'arches': ['x86_64'],
                               'variant_version': None, 'variant_release': None,
-                              'allowed_push_targets': []})
+                              'allowed_push_targets': [], 'pk': 1})
 
     def test_removing_non_relevant_variant_by_patch_succeeds(self):
         response = self.client.patch(reverse('variant-detail', args=['release-1.0/Server-UID']),
@@ -747,7 +747,7 @@ class VariantUpdateTestCase(APITestCase):
                              {'release': 'release-1.0', 'name': 'Server name', 'type': 'variant',
                               'id': 'Server', 'uid': 'Server-UID', 'arches': ['x86_64'],
                               'variant_version': None, 'variant_release': None,
-                              'allowed_push_targets': []})
+                              'allowed_push_targets': [], 'pk': 1})
 
 
 class ContentCategoryTestCase(APITestCase):

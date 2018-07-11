@@ -77,7 +77,7 @@ class ProductSerializer(StrictSerializerMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('name', 'short', 'active', 'product_versions', 'allowed_push_targets')
+        fields = ('name', 'short', 'active', 'product_versions', 'allowed_push_targets', 'pk')
 
 
 class ProductVersionSerializer(StrictSerializerMixin, serializers.ModelSerializer):
@@ -233,7 +233,7 @@ class ReleaseVariantSerializer(StrictSerializerMixin, serializers.ModelSerialize
     class Meta:
         model = Variant
         fields = ('release', 'id', 'uid', 'name', 'type', 'arches',
-                  'variant_version', 'variant_release', 'allowed_push_targets')
+                  'variant_version', 'variant_release', 'allowed_push_targets', 'pk')
 
     def to_internal_value(self, data):
         # Save value of attributes not directly corresponding to serializer

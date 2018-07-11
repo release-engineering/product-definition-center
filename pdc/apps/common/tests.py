@@ -888,3 +888,50 @@ class NotificationMixinTestCase(TestCase):
                                  'nickname': 'Spot'
                              },
                          })])
+
+
+class TestNumericIDMixin(TestCase):
+    def setUp(self):
+        class Base(object):
+            """
+            This class implements dummy methods needed by the mixin. They don't
+            really do anything, just mark that they were called.
+
+            The methods can not be in the derived class as the mixin would not
+            be able to delegate to them.
+            """
+            def __init__(self, lookup):
+                # The argument can either be an integer or the short name. In
+                # real code the router always creates kwarg named after the
+                # lookup field, so we mimic it here.
+                self.kwargs = {self.lookup_field: lookup}
+                self.get_object_called = False
+                self.get_queryset_called = False
+                self.queryset = mock.Mock()
+
+            def get_object(self):
+                self.get_object_called = True
+
+            def get_queryset(self):
+                self.get_queryset_called = True
+                return self.queryset
+
+        class DummyView(viewsets.NumericIDMixin, Base):
+            lookup_field = 'short'
+
+        self.View = DummyView
+
+    def test_retrieve_by_id(self):
+        view = self.View(1)
+        view.get_object()
+        self.assertTrue(view.get_queryset_called)
+        self.assertFalse(view.get_object_called)
+        self.assertEqual(view.queryset.mock_calls,
+                         [mock.call.get(pk=1)])
+
+    def test_retrieve_by_short(self):
+        view = self.View('foo')
+        view.get_object()
+        self.assertFalse(view.get_queryset_called)
+        self.assertTrue(view.get_object_called)
+        self.assertEqual(view.queryset.mock_calls, [])
