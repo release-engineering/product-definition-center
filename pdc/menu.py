@@ -9,13 +9,13 @@
 from kobo.django.menu import MenuItem
 
 menu = (
-    MenuItem("Products", "product_pages", menu=(
-        MenuItem("Base Products", "base_product/index"),
-        MenuItem("Products", "product/index"),
+    MenuItem("Releases", "product_pages", menu=(
+        MenuItem("Releases", "release/index"),
         MenuItem("Product Versions", "product_version/index"),
+        MenuItem("Products", "product/index"),
+        MenuItem("Base Products", "base_product/index"),
     )),
 
-    MenuItem("Releases", "release/index"),
     MenuItem("Composes", "compose/index"),
     MenuItem("API", "api-root", menu=(
         MenuItem("API v1", "api-root"),
